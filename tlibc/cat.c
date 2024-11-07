@@ -27,7 +27,8 @@ int main(int argc, char **argv) {
     // map the file into memory
     // mmap(NULL, fsz, 0x1, 0x02, fd, 0);
     const char *dat = sys_mmap(NULL, fsz, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (dat == (void *)(-1)) {
+    if (dat == (void *)(-1) || ((uintptr_t)dat & 0xfff) != 0) {
+        sys_write(2, "Bad mmap, abort\n", 16);
         return 1;
     }
 
