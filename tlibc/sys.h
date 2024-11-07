@@ -31,6 +31,21 @@ extern int sys_dup2(int oldfd, int newfd);
 extern int sys_pipe(int *pip);
 extern int sys_link(const char *oldpath, const char *newpath);
 
+struct stat {
+    uint32_t st_mode;
+    uint64_t st_ino;
+    uint64_t st_dev;
+    uint64_t st_nlink;
+    uint32_t st_uid;
+    uint32_t st_gid;
+    uint64_t st_size;
+    uint64_t st_atime;
+    uint64_t st_mtime;
+    uint64_t st_ctime;
+};
+
+extern int sys_fstat(int fd, struct stat *statbuf);
+
 /** Memory management */
 
 extern void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, long offset);

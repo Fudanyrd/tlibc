@@ -9,6 +9,7 @@ static unsigned int puthex(char *dst, unsigned int val);
 static unsigned int putptr(char *dst, unsigned long val);
 static unsigned int putl(char *dst, long val);
 static unsigned int putstr(char *dst, const char *src);
+static unsigned int putul(char *dst, unsigned long val);
 
 void Puts(const char *s)
 {
@@ -17,7 +18,7 @@ void Puts(const char *s)
 
 /**
  * Supported format: d(int), u(unsigned), x(for int32, unsigned32), 
- * p(for pointer, ulong), l(long), s(string).
+ * p(for pointer, ulong), l(long), s(string), L(unsigned long).
  */
 unsigned int Sprintf(char *dst, const char *fmt, ...)
 {
@@ -50,6 +51,10 @@ unsigned int Sprintf(char *dst, const char *fmt, ...)
             }
             case 's': {
                 ret += putstr(dst + ret, va_arg(arg, char *));
+                break;
+            }
+            case 'L': {
+                ret += putul(dst + ret, va_arg(arg, unsigned long));
                 break;
             }
             default: {
@@ -141,6 +146,10 @@ static unsigned int putptr(char *dst, unsigned long val)
 
     dst[ret++] = '0';
     dst[ret++] = 'x';
+    if (val == 0) {
+        buf[ret++] = '0';
+        return ret;
+    }
     while (val > 0) {
         buf[i++] = digits[val & 0xf];
         val = val >> 4ul;
@@ -198,6 +207,21 @@ static unsigned int putstr(char *dst, const char *src)
     return ret;
 }
 
+static unsigned int putul(char *dst, unsigned long val) {
+    if (val == 0) {
+        *dst = '0';
+        return 1;
+    }
+
+    unsigned int ret = 0;
+    while (val != 0) {
+        dst[ret++] = digits[val % 10];
+        val /= 10;
+    }
+
+    return ret;
+}
+
 unsigned int Printf(const char *fmt, ...)
 {
     static char buf[2048];
@@ -231,6 +255,10 @@ unsigned int Printf(const char *fmt, ...)
             }
             case 's': {
                 ret += putstr(dst + ret, va_arg(arg, char *));
+                break;
+            }
+            case 'L': {
+                ret += putul(dst + ret, va_arg(arg, unsigned long));
                 break;
             }
             default: {

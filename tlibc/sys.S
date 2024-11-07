@@ -142,3 +142,9 @@ sys_link:
     movq $SYS_link, %rax
     syscall
     ret
+
+.globl sys_fstat
+sys_fstat:
+    movq $SYS_fstat, %rax
+    syscall
+    ret
