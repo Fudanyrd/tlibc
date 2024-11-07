@@ -136,3 +136,9 @@ sys_pipe:
     movq $SYS_pipe, %rax
     syscall 
     ret
+
+.globl sys_link
+sys_link:
+    movq $SYS_link, %rax
+    syscall
+    ret

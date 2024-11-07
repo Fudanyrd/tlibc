@@ -3,8 +3,8 @@ OBJS = $(LIBC_OBJS) echo.o wc.o crash.o cat.o seq.o sh.o ls.o
 OBJS += pause.o
 CC = gcc
 CFLAGS = -g -MD -static
-UPROG = crash echo wc cat seq ls pause
-all: _crash _echo _wc _cat _seq _ls _pause
+UPROG = crash echo wc cat seq ls pause link
+all: _crash _echo _wc _cat _seq _ls _pause _link
 
 # not implemented
 # UPROG += sh

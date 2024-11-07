@@ -29,6 +29,7 @@ extern long sys_lseek(int fd, long off, int whence);
 extern int sys_dup(int fd);
 extern int sys_dup2(int oldfd, int newfd);
 extern int sys_pipe(int *pip);
+extern int sys_link(const char *oldpath, const char *newpath);
 
 /** Memory management */
 
