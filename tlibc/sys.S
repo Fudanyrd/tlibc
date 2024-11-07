@@ -148,3 +148,9 @@ sys_fstat:
     movq $SYS_fstat, %rax
     syscall
     ret
+
+.globl sys_mkdir
+sys_mkdir:
+    movq $SYS_mkdir, %rax
+    syscall
+    ret

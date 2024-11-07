@@ -30,6 +30,7 @@ extern int sys_dup(int fd);
 extern int sys_dup2(int oldfd, int newfd);
 extern int sys_pipe(int *pip);
 extern int sys_link(const char *oldpath, const char *newpath);
+extern int sys_mkdir(const char *path, int mode);
 
 struct stat {
     uint64_t st_dev;
