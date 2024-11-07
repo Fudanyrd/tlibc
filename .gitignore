@@ -1,0 +1,18 @@
+# binaries
+*.iso
+*.o
+*.a
+*.zip
+
+# dependencies
+*.d
+
+# miscellaneous dir
+build
+.vscode
+initramfs/bin
+initramfs/boot/initramfs.cpio.gz
+initramfs/device
+
+# linux kernel image(named bzImage after compilation)
+initramfs/boot/kernel-6

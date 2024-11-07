@@ -1,0 +1,8 @@
+# generated via for p in $( make collect ); do echo _$p >> .gitignore; done
+_crash
+_echo
+_wc
+_cat
+_seq
+_ls
+_pause
