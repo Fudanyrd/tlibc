@@ -88,6 +88,11 @@ static unsigned int putint(char *dst, int val)
         v = val;
     }
 
+    if (v == 0) {
+        *dst = '0';
+        return 1;
+    }
+
     int i = 0;
     while (v > 0) {
         buf[i++] = digits[v % 0xa];
@@ -103,6 +108,11 @@ static unsigned int putint(char *dst, int val)
 
 static unsigned int putuint(char *dst, unsigned int val)
 {
+    if (val == 0) {
+        *dst = '0';
+        return 1;
+    }
+
     unsigned int ret = 0;
     char buf[16];
     int i = 0;

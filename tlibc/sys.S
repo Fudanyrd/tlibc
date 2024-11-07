@@ -43,11 +43,6 @@ sys_open:
     syscall
     ret
 
-.globl sys_close
-    movq $SYS_close, %rax
-    syscall
-    ret
-
 .globl _start
 _start:
     // the linker will put the program entry here,
