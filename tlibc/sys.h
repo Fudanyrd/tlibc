@@ -32,16 +32,19 @@ extern int sys_pipe(int *pip);
 extern int sys_link(const char *oldpath, const char *newpath);
 
 struct stat {
-    uint32_t st_mode;
-    uint64_t st_ino;
     uint64_t st_dev;
+    uint64_t st_ino;
+    uint32_t st_mode;
     uint64_t st_nlink;
     uint32_t st_uid;
     uint32_t st_gid;
+    uint64_t st_rdev;
     uint64_t st_size;
-    uint64_t st_atime;
-    uint64_t st_mtime;
-    uint64_t st_ctime;
+    uint64_t st_blksize;
+    uint64_t st_blocks;
+    uint8_t st_atime[16];
+    uint8_t st_mtime[16];
+    uint8_t st_ctime[16];
 };
 
 extern int sys_fstat(int fd, struct stat *statbuf);

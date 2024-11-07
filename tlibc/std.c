@@ -213,10 +213,17 @@ static unsigned int putul(char *dst, unsigned long val) {
         return 1;
     }
 
+    // longest ulong is 18446_74407_37095_51615
+    static char buf[24];
     unsigned int ret = 0;
     while (val != 0) {
-        dst[ret++] = digits[val % 10];
+        buf[ret++] = digits[val % 10];
         val /= 10;
+    }
+
+    // reverse-copy back to dst
+    for (unsigned int i = 0; i < ret; i++) {
+        dst[i] = buf[ret - 1 - i];
     }
 
     return ret;
