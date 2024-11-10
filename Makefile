@@ -1,4 +1,6 @@
 .PHONY: initramfs run clean libc
+kernel = initramfs/boot/kernel-6
+qemu = qemu-system-x86_64
 
 libc: 
 	@cd tlibc && make && cd ..
@@ -11,8 +13,18 @@ run: bootable.iso
 	@qemu-system-x86_64 \
 		-cdrom bootable.iso
 
+qemu:
+	$(qemu) \
+		-kernel $(kernel) \
+		-machine ubuntu-q35 \
+		-initrd initramfs/boot/initramfs.cpio.gz
+
 clean:
 	@rm -rf build bootable.iso
 
 bootable.iso: initramfs/boot/grub/grub.cfg
 	@grub-mkrescue -o bootable.iso initramfs
+
+.PHONY: help
+help:
+	@echo "To run on real machine: make run; to simulate: make qemu or make debug."

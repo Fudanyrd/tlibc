@@ -4,6 +4,9 @@
 *.a
 *.zip
 
+# temporay file
+tmp
+
 # dependencies
 *.d
 
