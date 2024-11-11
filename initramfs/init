@@ -6,9 +6,12 @@
 # for cmd in $c1 $c2 $c3; do
 #   /bin/busybox ln -s /bin/busybox /bin/$cmd
 # done
-# mkdir -p /proc && mount -t proc  none /proc
-# mkdir -p /sys  && mount -t sysfs none /sys
-# export PS1='(linux) '
+/bin/busybox mkdir -p /proc && /bin/busybox mount -t proc  none /proc
+/bin/busybox mkdir -p /sys  && /bin/busybox mount -t sysfs none /sys
+export PS1='(yrd) '
+
+/bin/busybox insmod "/bin/zero.ko";
+/bin/busybox insmod "/bin/null.ko";
 
 # Rock'n Roll!
 /bin/busybox sh
