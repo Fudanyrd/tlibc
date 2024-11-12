@@ -37,6 +37,7 @@ static ssize_t device_file_read(
             return -EFAULT;    
         count -= bread;
         tread += bread;
+        user_buffer += bread;
     }
     /* Move reading position */
     *position += tread;

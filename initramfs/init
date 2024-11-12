@@ -10,8 +10,11 @@
 /bin/busybox mkdir -p /sys  && /bin/busybox mount -t sysfs none /sys
 export PS1='(yrd) '
 
+# create special devices
 /bin/busybox insmod "/bin/zero.ko";
 /bin/busybox insmod "/bin/null.ko";
+/bin/busybox mknod /dev/null c 248 0
+/bin/busybox mknod /dev/zero c 249 0
 
 # Rock'n Roll!
 /bin/busybox sh

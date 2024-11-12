@@ -20,7 +20,7 @@ qemu:
 		-initrd initramfs/boot/initramfs.cpio.gz
 
 clean:
-	@rm -rf build bootable.iso
+	-rm -rf build bootable.iso initramfs/boot/initramfs.cpio.gz
 
 bootable.iso: initramfs/boot/grub/grub.cfg
 	@grub-mkrescue -o bootable.iso initramfs
