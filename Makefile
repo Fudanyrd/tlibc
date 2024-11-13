@@ -1,5 +1,5 @@
 .PHONY: initramfs run clean libc
-kernel = initramfs/boot/kernel-6
+KERNEL = initramfs/boot/kernel-6
 QEMU = qemu-system-x86_64
 
 libc: 
@@ -15,11 +15,11 @@ run: bootable.iso
 
 qemu:
 	$(QEMU) \
-		-kernel $(kernel) \
-		-machine ubuntu-q35 \
+		-kernel $(KERNEL) \
 	  	-serial mon:stdio \
 		-nographic \
-		-initrd initramfs/boot/initramfs.cpio.gz
+		-initrd initramfs/boot/initramfs.cpio.gz \
+		-append "console=ttyS0 quiet acpi=off"
 
 clean:
 	-rm -rf build bootable.iso initramfs/boot/initramfs.cpio.gz
