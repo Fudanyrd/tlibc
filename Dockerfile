@@ -20,5 +20,14 @@ RUN apt-get -y install gdb
 RUN apt-get -y install qemu-system-x86
 RUN qemu-system-x86_64 -h
 
+# kernel dependencies
+RUN apt-get -y install bc
+RUN apt-get -y install libelf-dev
+RUN apt-get -y install libssl-dev
+
+# for building bootable iso image
+RUN apt-get -y install grub-common
+RUN apt-get -y install xorriso
+
 # done
 CMD ["sleep", "infinity"]

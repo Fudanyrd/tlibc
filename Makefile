@@ -17,6 +17,8 @@ qemu:
 	$(QEMU) \
 		-kernel $(kernel) \
 		-machine ubuntu-q35 \
+	  	-serial mon:stdio \
+		-nographic \
 		-initrd initramfs/boot/initramfs.cpio.gz
 
 clean:
