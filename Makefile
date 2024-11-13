@@ -1,6 +1,6 @@
 .PHONY: initramfs run clean libc
 kernel = initramfs/boot/kernel-6
-qemu = qemu-system-x86_64
+QEMU = qemu-system-x86_64
 
 libc: 
 	@cd tlibc && make && cd ..
@@ -10,11 +10,11 @@ initramfs:
 	  > ../initramfs.cpio.gz; cd ..; mv initramfs.cpio.gz initramfs/boot/
 	
 run: bootable.iso
-	@qemu-system-x86_64 \
+	$(QEMU) \
 		-cdrom bootable.iso
 
 qemu:
-	$(qemu) \
+	$(QEMU) \
 		-kernel $(kernel) \
 		-machine ubuntu-q35 \
 		-initrd initramfs/boot/initramfs.cpio.gz
