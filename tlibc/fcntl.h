@@ -6,12 +6,12 @@
 #define	O_RDONLY	0	/* Open read-only.  */
 #define	O_WRONLY	1	/* Open write-only.  */
 #define	O_RDWR		2	/* Open read/write.  */
+#define O_CREAT 64
+#define O_TRUNC 512
 
 
 /* Bits OR'd into the second argument to open.  */
-#define	O_CREAT		0x0200	/* Create file if it doesn't exist.  */
 #define	O_EXCL		0x0800	/* Fail if file already exists.  */
-#define	O_TRUNC		0x0400	/* Truncate file to zero length.  */
 #define	O_NOCTTY	0x8000	/* Don't assign a controlling terminal.  */
 #define	O_ASYNC		0x0040	/* Send SIGIO to owner when data is ready.  */
 #define	O_FSYNC		0x0080	/* Synchronous writes.  */
