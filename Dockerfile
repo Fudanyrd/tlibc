@@ -28,6 +28,7 @@ RUN apt-get -y install libssl-dev
 # for building bootable iso image
 RUN apt-get -y install grub-common
 RUN apt-get -y install xorriso
+RUN apt-get -y install grub-pc
 
 # done
 CMD ["sleep", "infinity"]
