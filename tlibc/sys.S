@@ -162,3 +162,9 @@ sys_chdir:
     movq $SYS_chdir, %rax
     syscall
     ret
+
+.globl sys_getcwd
+sys_getcwd:
+    movq $SYS_getcwd, %rax
+    syscall
+    ret

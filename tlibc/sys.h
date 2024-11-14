@@ -20,6 +20,7 @@ extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int option
 /** System IO */
 
 extern int sys_chdir(const char *path);
+extern char *sys_getcwd(char *buf, size_t siz);
 extern long sys_write(int fd, const char *buf, size_t cnt);
 extern long sys_read(int fd, char *buf, size_t cnt);
 extern int sys_open(const char *path, uint64_t mode);

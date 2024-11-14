@@ -9,5 +9,6 @@ _pause
 _link
 _stat
 _mkdir
+_pwd
 _yes
 _sh
