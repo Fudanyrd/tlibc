@@ -16,6 +16,13 @@
 
 /** stdio.h **/
 
+struct buffered_reader {
+    char buf[2048];
+    int start;
+    int end;
+};
+extern bool fdgets(struct buffered_reader *br, char *dst, int fd);
+
 extern void Puts(const char *fmt);
 extern unsigned int Sprintf(char *dst, const char *fmt, ...);
 extern unsigned int Printf(const char *fmt, ...);
@@ -33,13 +40,14 @@ typedef struct job {
     char *stdin_fo;   // redirent stdin to
     char *stdout_fo;  // redirent stdout to
     char *stderr_fo;  // redirent stderr to
-    char exe[64];     // executable
+    char *exe;     // executable
     char *argv[64];   // argv
     int used;         // # bytes in the buffer
     bool pipe;        // pipe to next prog?
-    char buf[0];  // buffer to store some data
+    char buf[3545];  // buffer to store some data
 } job_t;
 
+extern void Execve(char *exe, char **argv);
 extern int exec_job(job_t *job, int cnt);
 extern int system(const char *cmd);
 

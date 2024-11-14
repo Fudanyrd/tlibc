@@ -16,6 +16,60 @@ void Puts(const char *s)
     sys_write(1, s, Strlen(s));
 }
 
+// if buffer is empty, fill it
+static bool fill_buf(struct buffered_reader *br, int fd) {
+    if (br->start == br->end) {
+        br->start = br->end = 0;
+        // fill the queue
+        char *cp = br->buf;
+        long ret = sys_read(fd, cp, sizeof(br->buf));
+
+        // EOF
+        if (ret <= 0) {
+            return false;
+        }
+        br->end += ret;
+        br->end = br->end % sizeof(br->buf);
+    }
+
+    return true;
+}
+
+// returns current dst position
+static char *copy_buf(struct buffered_reader *br, char *dst) {
+    for (; br->start != br->end; ) {
+        // do not copy \0
+        bool succ = false;
+        if (br->buf[br->start]) {
+            *dst = br->buf[br->start];
+            succ = (*dst == '\n');
+            dst++;
+        }
+        br->start += 1;
+        br->start = br->start % sizeof(br->buf);
+
+        if (succ) {
+            *dst = 0;
+            return dst;
+        }
+    }
+
+    return dst;
+}
+
+bool fdgets(struct buffered_reader *br, char *dst, int fd) {
+    // the queue is empty
+    while (1) {
+        if (!fill_buf(br, fd)) {
+            return false;
+        }
+        dst = copy_buf(br, dst);
+        if (*dst == 0) {
+            return true;
+        }
+    }
+}
+
 /**
  * Supported format: d(int), u(unsigned), x(for int32, unsigned32), 
  * p(for pointer, ulong), l(long), s(string), L(unsigned long).
@@ -320,6 +374,7 @@ void *Memset(void *addr, int val, size_t len) {
     for (size_t i = 0; i < len; i++) {
         *(uint8_t *)(addr + i) = val & 0xff;
     }
+    return addr;
 }
 
 /** Execute a single job */
@@ -332,26 +387,20 @@ static void exec_single(job_t *job) {
     Assert(job != NULL);
     if (job->stdin_fo) {
         int fd = sys_open(job[0].stdin_fo, O_RDONLY);
-        if (fd > 0) {
-            sys_dup2(fd, 0);
-        }
+        sys_dup2(fd, 0);
     }
 
     if (job->stdout_fo) {
         int fd = sys_open(job[0].stdout_fo, O_CREAT | O_RDWR);
-        if (fd > 0) {
-            sys_dup2(fd, 1);
-        }
+        sys_dup2(fd, 1);
     }
 
     if (job->stderr_fo) {
         int fd = sys_open(job[0].stderr_fo, O_CREAT | O_RDWR);
-        if (fd > 0) {
-            sys_dup2(fd, 2);
-        }
+        sys_dup2(fd, 2);
     }
 
-    sys_execve((char *)job->exe, (char **)job->argv, NULL);
+    Execve((char *)job->exe, (char **)job->argv);
 }
 
 int exec_job(job_t *job, int cnt) {
@@ -380,7 +429,6 @@ static void exec_recur_noret(job_t *job, int cur, int total, int stdout_fd) {
         sys_exit(1);
     }
 
-    int stat;
     int pip[2];
     if (sys_pipe((int *)pip) != 0) {
         sys_exit(1);
@@ -415,5 +463,36 @@ char *Strcpy(char *dst, const char *src) {
 
     for (; *src; dst++, src++) {
         *dst = *src;
+    }
+
+    // set null terminator, return.
+    *dst = '\0';
+    return dst;
+}
+
+/** 
+ * Wrapper of sys_execve, will auto search exe path. 
+ */
+void Execve(char *exe, char **argv) {
+    static char buf[128];
+    // possible path to exe
+    static const char *dir[] = {
+        "/",
+        "/bin/",
+        "/usr/bin/",
+        "/usr/local/bin/",
+    };
+    char *chp;
+
+    sys_execve(exe, argv, NULL);
+    for (size_t i = 0; i < sizeof(dir) / sizeof(dir[0]); i++) {
+        const char *path = dir[i];
+        chp = (char *)buf;
+
+        // copy dir name
+        chp = Strcpy(chp, path);
+        // copy path name
+        chp = Strcpy(chp, exe);
+        sys_execve((char *)buf, argv, NULL);
     }
 }
