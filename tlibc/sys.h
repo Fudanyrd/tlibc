@@ -12,13 +12,14 @@
 /** State Machine Operation */
 
 extern void sys_exit(int code) __attribute__((noreturn));
-extern void sys_execve(char *exe, char **argv, char **env) __attribute__((noreturn));
+extern void sys_execve(char *exe, char **argv, char **env);
 extern int sys_fork(void);
 extern void sys_pause(void);
 extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int options);
 
 /** System IO */
 
+extern int sys_chdir(const char *path);
 extern long sys_write(int fd, const char *buf, size_t cnt);
 extern long sys_read(int fd, char *buf, size_t cnt);
 extern int sys_open(const char *path, uint64_t mode);

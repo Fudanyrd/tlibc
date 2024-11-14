@@ -156,3 +156,9 @@ sys_waitid:
     movq %rcx, %r10
     syscall
     ret
+
+.globl sys_chdir
+sys_chdir:
+    movq $SYS_chdir, %rax
+    syscall
+    ret
