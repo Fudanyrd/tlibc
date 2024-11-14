@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "wait.h"
 
 /** State Machine Operation */
 
@@ -14,10 +15,7 @@ extern void sys_exit(int code) __attribute__((noreturn));
 extern void sys_execve(char *exe, char **argv, char **env) __attribute__((noreturn));
 extern int sys_fork(void);
 extern void sys_pause(void);
-
-// not implementetd(too complex)
-extern int wait(int *stat);
-extern unsigned int sleep(unsigned int seconds);
+extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int options);
 
 /** System IO */
 

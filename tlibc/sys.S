@@ -149,3 +149,10 @@ sys_mkdir:
     movq $SYS_mkdir, %rax
     syscall
     ret
+
+.globl sys_waitid
+sys_waitid:
+    movq $SYS_waitid, %rax
+    movq %rcx, %r10
+    syscall
+    ret

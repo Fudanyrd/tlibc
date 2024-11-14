@@ -369,7 +369,7 @@ int exec_job(job_t *job, int cnt) {
         sys_exit(1);
     }
 
-    return 0;
+    return sys_waitid(P_ALL, 0, NULL, WEXITED);
 }
 
 static void exec_recur_noret(job_t *job, int cur, int total, int stdout_fd) {

@@ -5,18 +5,18 @@
 static job_t jobs[8];
 
 static char *e1[] = {
-    "cat",
+    "_cat",
     "README.txt",
     NULL
 };
 
 static char *cat[] = {
-    "cat",
+    "_cat",
     NULL
 };
 
 static char *wc[] = {
-    "wc",
+    "_wc",
     NULL
 };
 
@@ -110,10 +110,16 @@ int main(int argc, char **argv) {
     job->pipe = false;
 
     job++;
+    Strcpy(job->exe, cat[0]);
+    job->argv[0] = cat[0];
+    job->argv[1] = cat[1];
+
+    job++;
     Strcpy(job->exe, wc[0]);
     job->argv[0] = wc[0];
     job->argv[1] = wc[1];
+    job->argv[2] = NULL;
     
-    exec_job(jobs, 2);
+    exec_job(jobs, 3);
     return 0;
 }
