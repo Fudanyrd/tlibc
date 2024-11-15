@@ -140,7 +140,7 @@ static int system_single(const char *cmd, int end) {
         i = next;
     }
 
-    // built in commands: cd, exit(q)
+    // built in commands: cd, exit(q), pid
     if (Strcmp("cd", jobs[0].exe) == 0) {
         if (sys_chdir(jobs[0].argv[1]) != 0) {
             sys_write(2, "cd failure\n", 11);
@@ -151,6 +151,10 @@ static int system_single(const char *cmd, int end) {
         Strcmp("q", jobs[0].exe) == 0) {
         sys_write(1, "Bye.\n", 5);
         sys_exit(0);
+        return 0;
+    }
+    if (Strcmp("pid", jobs[0].exe) == 0) {
+        Printf("%d\n", sys_getpid());
         return 0;
     }
 

@@ -17,6 +17,7 @@ extern int sys_fork(void);
 extern void sys_pause(void);
 extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int options);
 extern int sys_kill(int pid, int sig);
+extern int sys_getpid(void);
 
 /** System IO */
 

@@ -174,3 +174,9 @@ sys_kill:
     movq $SYS_kill, %rax
     syscall
     ret
+
+.globl sys_getpid
+sys_getpid:
+    movq $SYS_getpid, %rax
+    syscall
+    ret
