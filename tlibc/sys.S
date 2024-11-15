@@ -168,3 +168,9 @@ sys_getcwd:
     movq $SYS_getcwd, %rax
     syscall
     ret
+
+.globl sys_kill
+sys_kill:
+    movq $SYS_kill, %rax
+    syscall
+    ret
