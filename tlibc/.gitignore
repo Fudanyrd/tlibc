@@ -1,15 +1,16 @@
 # generated via for p in $( make collect ); do echo _$p >> .gitignore; done
+_cat
 _crash
 _echo
-_wc
-_cat
-_seq
-_ls
-_pause
-_link
-_stat
-_mkdir
-_pwd
-_yes
-_sh
+_eval
 _kill
+_link
+_ls
+_mkdir
+_pause
+_pwd
+_seq
+_sh
+_stat
+_wc
+_yes

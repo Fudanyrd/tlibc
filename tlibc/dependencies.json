@@ -13,6 +13,12 @@
         "stdio.o",
         "string.o"
     ],
+    "eval": [
+        "eval.o",
+        "sys.o",
+        "stdio.o",
+        "string.o"
+    ],
     "kill": [
         "kill.o",
         "sys.o",
