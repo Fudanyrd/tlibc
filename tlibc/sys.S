@@ -180,3 +180,9 @@ sys_getpid:
     movq $SYS_getpid, %rax
     syscall
     ret
+
+.globl sys_nanosleep
+sys_nanosleep:
+    movq $SYS_nanosleep, %rax
+    syscall
+    ret

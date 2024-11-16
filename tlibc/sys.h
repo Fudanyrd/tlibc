@@ -19,6 +19,12 @@ extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int option
 extern int sys_kill(int pid, int sig);
 extern int sys_getpid(void);
 
+struct timespec {
+    long tv_sec;  // seconds
+    long tv_nsec;  // nanoseconds
+};
+extern int sys_nanosleep(const struct timespec *req, struct timespec *rem);
+
 /** System IO */
 
 extern int sys_chdir(const char *path);

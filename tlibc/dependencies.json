@@ -61,6 +61,11 @@
         "string.o",
         "system.o"
     ],
+    "sleep": [
+        "sleep.o",
+        "sys.o",
+        "atoi.o"
+    ],
     "stat": [
         "stat.o",
         "sys.o",
