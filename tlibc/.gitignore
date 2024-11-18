@@ -1,4 +1,5 @@
 # generated via for p in $( make collect ); do echo _$p >> .gitignore; done
+a.out
 _cat
 _crash
 _echo
