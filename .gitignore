@@ -16,6 +16,9 @@ build
 initramfs/bin
 initramfs/boot/initramfs.cpio.gz
 initramfs/device
+initramfs/lib
+initramfs/lib64
+initramfs/usr
 
 # linux kernel image(named bzImage after compilation)
 initramfs/boot/kernel-6
