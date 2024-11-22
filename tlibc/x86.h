@@ -1,3 +1,5 @@
+#error "This is for reference. Do not include. "
+
 /** wrap something in double quotes */
 #define TO_STR(reg) #reg
 

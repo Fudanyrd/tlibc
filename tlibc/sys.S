@@ -46,7 +46,7 @@ sys_open:
     ret
 
 .globl sys_openat
-sys_open:
+sys_openat:
     movq $SYS_openat, %rax 
     syscall
     ret
@@ -119,6 +119,12 @@ sys_execve:
 .globl sys_fork
 sys_fork:
     movq $SYS_fork, %rax
+    syscall
+    ret
+
+.globl sys_vfork
+sys_vfork:
+    movq $SYS_vfork, %rax
     syscall
     ret
 
@@ -245,6 +251,12 @@ _start:
 sys_mmap:
     mov w8, #SYS_mmap
     svc #0 
+    ret
+
+.globl sys_vfork
+sys_vfork:
+    mov w8, #SYS_vfork
+    svc #0
     ret
 
 .globl sys_munmap

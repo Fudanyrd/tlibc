@@ -13,7 +13,23 @@
 
 extern void sys_exit(int code) __attribute__((noreturn));
 extern void sys_execve(char *exe, char **argv, char **env);
+
+extern int sys_vfork(void);
+
+#ifdef __X86_64__
 extern int sys_fork(void);
+#endif // __X86_64__
+#ifdef __AARCH64__
+static inline int sys_fork(void) {
+    // call vfork instead of fork.
+    return sys_vfork();
+}
+#endif // __AARCH64__
+
+#ifdef __RISCV64__
+# error "riscv 64 is not supported."
+#endif
+
 extern void sys_pause(void);
 extern int sys_waitid(uint32_t idtype, uint32_t id, siginfo_t *infop, int options);
 extern int sys_kill(int pid, int sig);
