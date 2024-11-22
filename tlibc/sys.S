@@ -3,6 +3,8 @@
 // -E enables macro expansion.
 .globl main
 
+#ifdef __X86_64__
+
 // NOTE:
 // syscall arguments:
 // first:   rdi
@@ -186,3 +188,129 @@ sys_nanosleep:
     movq $SYS_nanosleep, %rax
     syscall
     ret
+
+#endif // __X86_64__
+
+#ifdef __AARCH64__
+
+.globl sys_exit
+sys_exit:
+    mov w8, #SYS_exit
+    svc #0
+
+.globl sys_write
+sys_write:
+    mov w8, #SYS_write
+    svc #0
+    ret
+
+.globl sys_read
+sys_read:
+    mov w8, #SYS_read
+    svc #0
+    ret
+
+.globl _start
+_start:
+    // the linker will put the program entry here,
+    // where argc and argv are prepared before jumping to
+    // main.
+    // 
+    // the main routine can be written in C, eventually
+    // provide entire unix experience!
+
+    // argc -> x0, x0 = *(int *)sp
+	ldr x0, [sp]
+    // argv -> x1, x1 = sp + 0x8
+	mov x1, sp
+    add x1, x1, #0x8
+    // exit(main(argc, argv));
+    bl main
+    bl sys_exit
+    ret
+
+.globl sys_mmap
+sys_mmap:
+    mov w8, #SYS_mmap
+    svc #0 
+    ret
+
+.globl sys_munmap
+sys_munmap:
+    mov w8, #SYS_munmap 
+    svc #0 
+    ret
+
+.globl sys_close
+sys_close:
+    mov w8, #SYS_close
+    svc #0
+    ret
+
+.globl sys_lseek
+sys_lseek:
+    mov w8, #SYS_lseek
+    svc #0
+    ret
+
+.globl sys_brk
+sys_brk:
+    mov w8, #SYS_brk
+    svc #0
+    ret
+
+.globl sys_execve
+sys_execve:
+    mov w8, #SYS_execve
+    svc #0
+    ret
+
+.globl sys_dup
+sys_dup:
+    mov w8, #SYS_dup
+    svc #0
+    ret
+
+.globl sys_fstat
+sys_fstat:
+    mov w8, #SYS_fstat
+    svc #0
+    ret
+
+.globl sys_waitid
+sys_waitid:
+    mov w8, #SYS_waitid
+    svc #0
+    ret
+
+.globl sys_chdir
+sys_chdir:
+    mov w8, #SYS_chdir
+    svc #0
+    ret
+
+.globl sys_getcwd
+sys_getcwd:
+    mov w8, #SYS_getcwd
+    svc #0
+    ret
+
+.globl sys_kill
+sys_kill:
+    mov w8, #SYS_kill
+    svc #0
+    ret
+
+.globl sys_getpid
+sys_getpid:
+    mov w8, #SYS_getpid
+    svc #0
+    ret
+
+.globl sys_nanosleep
+sys_nanosleep:
+    mov w8, #SYS_nanosleep
+    svc #0
+    ret
+
+#endif // __AARCH64__

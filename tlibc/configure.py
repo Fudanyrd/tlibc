@@ -52,6 +52,14 @@ def main() -> int:
     return 0;
 
 if __name__ == "__main__":
+    # architecture info
+    ARCH = {
+        1: " -D__X86_64__ ",
+        2: " -D__AARCH64__ ",
+    }
+    a = input("architecture(1: x86_64, 2: aarch64)")
+    a = int(a)
+    CFLAGS += ARCH[a]
     t = input(f"CFLAGS = {CFLAGS}")
     CFLAGS += t
     exit(main())
