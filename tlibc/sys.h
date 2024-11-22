@@ -31,7 +31,22 @@ extern int sys_chdir(const char *path);
 extern char *sys_getcwd(char *buf, size_t siz);
 extern long sys_write(int fd, const char *buf, size_t cnt);
 extern long sys_read(int fd, char *buf, size_t cnt);
+
+// Handle sys_open differently.
+#ifdef __X86_64__
+extern int sys_openat(int dirfd, const char *path, uint64_t mode);
 extern int sys_open(const char *path, uint64_t mode);
+#endif // __X86_64__
+
+#ifdef __AARCH64__
+#define AT_FDCWD (-100)
+extern int sys_openat(int dirfd, const char *path, uint64_t mode);
+
+static inline int sys_open(const char *path, uint64_t mode) {
+    return *path == '/' ? sys_openat(0, path, mode) // absolute path
+                        : sys_openat(AT_FDCWD, path, mode); 
+}
+#endif // __AARCH64__
 extern void sys_close(int fd);
 extern long sys_lseek(int fd, long off, int whence);
 extern int sys_dup(int fd);

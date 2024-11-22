@@ -45,6 +45,12 @@ sys_open:
     syscall
     ret
 
+.globl sys_openat
+sys_open:
+    movq $SYS_openat, %rax 
+    syscall
+    ret
+
 .globl _start
 _start:
     // the linker will put the program entry here,
@@ -197,6 +203,12 @@ sys_nanosleep:
 sys_exit:
     mov w8, #SYS_exit
     svc #0
+
+.globl sys_openat
+sys_openat:
+    mov w8, #sys_openat
+    svc #0
+    ret
 
 .globl sys_write
 sys_write:
