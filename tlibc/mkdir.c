@@ -9,6 +9,12 @@ int mkdir(const char *dir) {
     int ret = 0;
     bool is_end = true;
 
+    // mkdir from root
+    if (*dir == '/') {
+        buf[i] = *dir;
+        i++;
+    }
+
     while (dir[i] != 0) {
         buf[i] = dir[i];
         if (dir[i] == '/') {
