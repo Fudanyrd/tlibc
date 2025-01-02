@@ -3,6 +3,9 @@
 *.o
 *.a
 *.zip
+*.img
+*.tar
+*.gz
 
 # temporay file
 tmp
@@ -21,4 +24,7 @@ initramfs/lib64
 initramfs/usr
 
 # linux kernel image(named bzImage after compilation)
-initramfs/boot/kernel-6
+initramfs/boot/Image*
+
+# custom root file system
+rootfs/
