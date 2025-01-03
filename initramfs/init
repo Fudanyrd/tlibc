@@ -8,7 +8,7 @@
 # done
 /bin/busybox mkdir -p /proc && /bin/busybox mount -t proc  none /proc
 /bin/busybox mkdir -p /sys  && /bin/busybox mount -t sysfs none /sys
-export PS1='(yrd) '
+export PS1='(cd) '
 
 # Rock'n Roll!
 /bin/busybox sh
