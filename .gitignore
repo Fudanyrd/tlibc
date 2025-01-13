@@ -29,3 +29,5 @@ initramfs/boot/Image*
 
 # custom root file system
 rootfs/
+usb/
+

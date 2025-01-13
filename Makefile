@@ -37,7 +37,7 @@ clean:
 	-rm -rf build bootable.iso *.img initramfs/boot/initramfs.cpio.gz
 
 bootable.iso: initramfs/boot/grub/grub.cfg
-	@grub-mkrescue -o bootable.iso ./initramfs/
+	@grub-mkrescue -o bootable.iso ./initramfs/ -no-emul-boot
 
 # If you want to use an initial ram fs, 
 # create a folder named 'rootfs' and 'make vm.img'
