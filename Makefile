@@ -20,8 +20,15 @@ initramfs:
 	@cd usr && find . -print0 | cpio --null -ov --format=newc | gzip -9 \
 	  > ../initramfs.cpio.gz; cd ..; mv initramfs.cpio.gz initramfs/boot/
 	
-run: bootable.iso vm.img
+run: bootable.iso vm.img usb.img
 	$(QEMU) -cdrom bootable.iso -hda ./vm.img \
+			-usb  \
+			-drive if=none,format=raw,file=./usb.img,id=stick \
+			-device usb-storage,drive=stick
+
+#			-netdev tap,id=net0  \
+#			-object filter-dump,id=net0,netdev=net0,file=packets.pcap \
+#			-device e1000,netdev=net0
 
 qemu: vm.img
 	$(QEMU) \
@@ -45,6 +52,10 @@ bootable.iso: initramfs/boot/grub/grub.cfg
 vm.img: rootfs/init
 	@dd if=/dev/zero of=./vm.img bs=1M count=512
 	@mkfs.ext4 -d ./rootfs vm.img
+
+usb.img:
+	@dd if=/dev/zero of=./usb.img bs=1M count=128
+	@mkfs.ext4 -d ./usb usb.img
 
 .PHONY: help
 help:

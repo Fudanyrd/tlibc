@@ -9,6 +9,7 @@
 /bin/busybox mkdir -p /proc && /bin/busybox mount -t proc  none /proc
 /bin/busybox mkdir -p /sys  && /bin/busybox mount -t sysfs none /sys
 export PS1='(cd) '
+/bin/busybox mount /dev/sda /mnt
 
 # Rock'n Roll!
 /bin/busybox sh
