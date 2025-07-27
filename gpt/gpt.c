@@ -242,23 +242,36 @@ struct GPTHeader {
   // uint8_t reservedArr[0];
 } __attribute__((packed));
 
+//
+// GUID specification
+// @see https://uefi.org/specs/UEFI/2.10/Apx_A_GUID_and_Time_Formats.html?highlight=guid#guid-and-time-formats
+//
+struct GUID {
+
+  uint32_t timeLow;
+  uint16_t timeMid;
+  uint16_t timeHigh;
+  uint8_t clockSeqHigh;
+  uint8_t clockSeqLow;
+  uint8_t node[6];
+} __attribute__((packed));
 
 // C12A7328-F81F-11D2-BA4B-00A0C93EC93B
-static const uint8_t EFI_SYSTEM_PARTITION[16] = {
-  0xc1, 0x2a, 0x73, 0x28,
-  0xf8, 0x1f,
-  0x11, 0xd2,
+static const struct GUID EFI_SYSTEM_PARTITION = {
+  0xc12a7328,
+  0xf81f,
+  0x11d2,
   0xba, 0x4b,
-  0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
+  {0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b},
 };
 
 // 024DEE41-33E7-11D3-9D69-0008C781F39F
-static const uint8_t PARTITION_WITH_LEGACY_MBR[16] = {
-  0x02, 0x4d, 0xee, 0x41,
-  0x33, 0xe7,
-  0x11, 0xd3,
+static const struct GUID PARTITION_WITH_LEGACY_MBR = {
+  0x024dee41,
+  0x33e7,
+  0x11d3,
   0x9d, 0x69,
-  0x00, 0x08, 0xc7, 0x81, 0xf3, 0x9f
+  {0x00, 0x08, 0xc7, 0x81, 0xf3, 0x9f}
 };
 
 struct PartitionEntry {
@@ -289,15 +302,16 @@ struct PartitionEntry {
 } __attribute__((packed));
 
 // 9E8D8D40-E4D1-3547-AD9E-86523F5E2F4A
-static const uint8_t myDiskID[16] = {
-  0x9e, 0x8d, 0x8d, 0x40,
-  0xe4, 0xd1,
-  0x35, 0x47,
+static const struct GUID myDiskID = {
+  0x9e8d8d40,
+  0xe4d1,
+  0x3547,
   0xad, 0x9e,
-  0x86, 0x52, 0x3f, 0x5e, 0x2f, 0x4a
+  {0x86, 0x52, 0x3f, 0x5e, 0x2f, 0x4a}
 };
 
 int main(int argc, char **argv) {
+  assert(sizeof(struct GUID) == 16);
   assert(sizeof(struct PartitionRecord) == 16);
   assert(sizeof(struct MBR) == 512);
   assert(BLOCK_SIZE >= 512);
@@ -334,7 +348,7 @@ int main(int argc, char **argv) {
   lba1->alternateLBA = nBlock - 1;
   lba1->firstUsableLBA = 2 + nSectorForArray;
   lba1->lastUsableLBA = nBlock - 2;
-  memcpy((void *)lba1->diskID, myDiskID, sizeof(lba1->diskID));
+  memcpy((void *)lba1->diskID, &myDiskID, sizeof(lba1->diskID));
   lba1->startEntryArray = 2;
   lba1->numEntries = nPartition;
   lba1->sizeEntryArray = sizeof(struct PartitionEntry);
@@ -349,8 +363,8 @@ int main(int argc, char **argv) {
   entryArray->attrs |= (1 << 2);
   entryArray->attrs |= (1 << 0);
   strcpy(entryArray->partitionName, "My First Bootable Sector");
-  memcpy(entryArray->partId, myDiskID, sizeof(entryArray->partId));
-  memcpy(entryArray->partType, EFI_SYSTEM_PARTITION, sizeof(EFI_SYSTEM_PARTITION));
+  memcpy(entryArray->partId, &myDiskID, sizeof(entryArray->partId));
+  memcpy(entryArray->partType, &EFI_SYSTEM_PARTITION, sizeof(EFI_SYSTEM_PARTITION));
 
   // FIXME: compute the CRC32 
   lba1->crc32EntryArray = crc32(entryArray, lba1->sizeEntryArray * lba1->numEntries);
