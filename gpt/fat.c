@@ -434,6 +434,7 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   const uint32_t fatSizeInSector = CDIV(numClusterOnDisk, numEntryPerSector);
   const uint32_t numResevedSector = 8;
   const uint32_t numFATSector = fatSizeInSector * 2 /* a backup is stored. */;
+  const uint32_t numFreeFATEntry = (numFATSector * numEntryPerSector) - 2;
   assert(numClusterOnDisk > 2 && "too few clusters");
   memset(bpb, 0, sizeof(*bpb));
   bpb->jmpBoot[0] = 0xeb;
@@ -442,12 +443,13 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   memcpy(bpb->OEFName, FAT_IMPL, sizeof(bpb->OEFName));
   _generic_store_le(bpb->bytesPerSector, config->bytesPerSector);
   _generic_store_le(bpb->numSectorPerCluster, config->clusterSize);
+  _generic_store_le(bpb->numReservedSectors, numResevedSector);
   _generic_store_le(bpb->numAllocTable, 2);
   _generic_store_le(bpb->rootEntryCount, 0);
   _generic_store_le(bpb->numSectors16, 0);
   _generic_store_le(bpb->media, media);
-  _generic_store_le(bpb->sectorsPerTrack, 256);
-  _generic_store_le(bpb->numHeads, 2);
+  _generic_store_le(bpb->sectorsPerTrack, 32);
+  _generic_store_le(bpb->numHeads, 8);
   _generic_store_le(bpb->hiddenSec, 0);
   _generic_store_le(bpb->numSectors32, config->nSector);
   _generic_store_le(bpb->fatSize32, fatSizeInSector);
@@ -457,6 +459,8 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   _generic_store_le(bpb->fsInfo, 1);
   _generic_store_le(bpb->bootRecordSector, 6);
   _generic_store_le(bpb->driverNum, 0x80);
+  _generic_store_le(bpb->bootSignature, 0x29);
+  _generic_store_le(bpb->volSerialNumber, 0xe5792f15);
   memcpy(bpb->volLabel, "NO NAME         ", sizeof(bpb->volLabel));
   memcpy(bpb->fileSysType, "FAT32   ", sizeof(bpb->fileSysType));
   _generic_store_le(bpb->signatureByte1, 0x55);
@@ -470,7 +474,7 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   struct FSInfo *finfo = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 1));
   _generic_store_le(finfo->leadSignature, 0x41615252);
   _generic_store_le(finfo->structSignature, 0x61417272);
-  _generic_store_le(finfo->freeCount, 0xFFFFFFFF /* FIXME */);
+  _generic_store_le(finfo->freeCount, numFreeFATEntry);
   _generic_store_le(finfo->nextFree, 0x2);
   _generic_store_le(finfo->trailSignature, 0xAA550000);
   struct FSInfo *finfoCopy = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 7));
