@@ -156,6 +156,9 @@ struct BPB {
     // If non-zero, indicates the sector number in the 
     // reserved area of the volume of a copy of the boot 
     // record.
+    //
+    // To avoid loss of data, sector 6 must contain a copy
+    // of BPB, this field contains value 6 for both copy.
     uint16_t bootRecordSector;
 
     // Reserved. Must be set to 0x0
@@ -197,9 +200,54 @@ struct BPB {
 
 } __attribute__((packed));
 
-int main(int argc, char **argv) {
 
-  printf("%ld\n", sizeof(struct BPB));
+// The FSInfo structure is only present on volumes formatted FAT32. 
+// The structure must be persisted on the media during volume 
+// initialization (format). The structure must be located at 
+// sector #1 – immediately following the sector containing the BPB. 
+// A copy of the structure is maintained at sector #7.
+struct FSInfo {
+
+  // Value = 0x41615252
+  uint32_t leadSignature;
+
+  // Reserved, set to 0
+  uint8_t reserved[480];
+
+  // Value is 0x61417272.
+  uint32_t structSignature;
+
+  // Contains the last known free cluster count on the  volume. 
+  // The value 0xFFFFFFFF indicates the free count is unknown
+  //
+  // The contents of this field must be validated at 
+  // volume mount (and subsequently maintained in 
+  // memory by the file system driver implementation
+  uint32_t freeCount;
+
+  // Contains the cluster number of the first available 
+  // (free) cluster on the volume. 
+  // The value 0xFFFFFFFF indicates that there exists 
+  // no information about the first available (free) 
+  // cluster. 
+  //
+  // The contents of this field must be validated at 
+  // volume mount.
+  uint32_t nextFree;
+
+  // must be 0
+  uint8_t reserved1[12];
+
+  // Value = 0xAA550000
+  uint32_t trailSignature;
+
+} __attribute__((packed));
+
+int main(int argc, char **argv) {
+  // validate fat32 structs.
+  assert(sizeof(uint8_t) == 1);
   assert(sizeof(struct BPB) == 512);
+  assert(sizeof(struct FSInfo) == 512);
+
   return 0;
 }
