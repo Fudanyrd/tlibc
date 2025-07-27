@@ -363,25 +363,7 @@ struct FSInfo {
 
 } __attribute__((packed));
 
-// use default sector size, 512
-#define FAT32_SECTOR_SIZE ((uint32_t) 512)
-
-struct FATConfig {
-  // number of sectors.
-  uint32_t nSector; 
-
-  uint32_t bytesPerSector;
-
-
-  // size of a cluster
-  uint32_t clusterSize; 
-
-  // if true, write random data to data region.
-  bool writeRandomData;
-
-  // if true, the media is fixed, else removable.
-  bool isFixed;
-};
+#include "fat.h"
 
 /**
  * ceiling divisoin
@@ -429,7 +411,8 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   /** Begin initialize Bios parameter block */
   struct BPB *bpb = (struct BPB *)buf;
   const uint8_t media = config->isFixed ? 0xF8 : 0xF0;
-  const uint32_t numEntryPerSector = FAT32_SECTOR_SIZE / sizeof(fat32_entry_t);
+  const uint32_t sectorSize = config->bytesPerSector;
+  const uint32_t numEntryPerSector = sectorSize / sizeof(fat32_entry_t);
   const uint32_t numClusterOnDisk = (config->nSector) / (config->clusterSize);
   const uint32_t fatSizeInSector = CDIV(numClusterOnDisk, numEntryPerSector);
   const uint32_t numResevedSector = 8;
@@ -466,30 +449,30 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   _generic_store_le(bpb->signatureByte1, 0x55);
   _generic_store_le(bpb->signatureByte2, 0xaa);
   // create a copy at sector 6.
-  struct BPB *bpbCopy = (struct BPB *)(buf + (FAT32_SECTOR_SIZE * 6));
+  struct BPB *bpbCopy = (struct BPB *)(buf + (sectorSize * 6));
   memcpy(bpbCopy, bpb, sizeof(*bpbCopy));
   /** End initialize Bios parameter block */
 
   /** Initialize FSInfo block(at #1, #7). */
-  struct FSInfo *finfo = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 1));
+  struct FSInfo *finfo = (struct FSInfo *)(buf + (sectorSize * 1));
   _generic_store_le(finfo->leadSignature, 0x41615252);
   _generic_store_le(finfo->structSignature, 0x61417272);
   _generic_store_le(finfo->freeCount, numFreeFATEntry);
   _generic_store_le(finfo->nextFree, 0x2);
   _generic_store_le(finfo->trailSignature, 0xAA550000);
-  struct FSInfo *finfoCopy = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 7));
+  struct FSInfo *finfoCopy = (struct FSInfo *)(buf + (sectorSize * 7));
   memcpy(finfoCopy, finfo, sizeof(*finfo));
   /** End Initialize FSInfo block. */
 
   /** Initialize File allocation table. */
   const uint32_t fat1Value = FAT32_CHUNK_SHUT_BITMASK | FAT32_HDR_ERROR_BITMASK;
-  memset(buf + (FAT32_SECTOR_SIZE * numResevedSector),
-  0, FAT32_SECTOR_SIZE * numFATSector);
-  fat32_entry_t *firstTable = buf + (FAT32_SECTOR_SIZE * numResevedSector);
+  memset(buf + (sectorSize * numResevedSector),
+  0, sectorSize * numFATSector);
+  fat32_entry_t *firstTable = buf + (sectorSize * numResevedSector);
   _generic_store_le(firstTable[0], (0xFFFF00) | media);
   _generic_store_le(firstTable[1], fat1Value);
   _generic_store_le(firstTable[2], 0xFFFFFFFF);
-  fat32_entry_t *secondTable = buf + (FAT32_SECTOR_SIZE * 
+  fat32_entry_t *secondTable = buf + (sectorSize * 
   (numResevedSector + fatSizeInSector));
   _generic_store_le(secondTable[0], (0xFFFF00) | media);
   _generic_store_le(secondTable[1], fat1Value);
@@ -497,9 +480,9 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   /** End Initialize File allocation table. */
 
   /** Initialize root directory. */
-  const uint32_t dataOffset = FAT32_SECTOR_SIZE * (
+  const uint32_t dataOffset = sectorSize * (
     numResevedSector + numFATSector);
-  memset(buf + dataOffset, 0, FAT32_SECTOR_SIZE * config->clusterSize);
+  memset(buf + dataOffset, 0, sectorSize * config->clusterSize);
 
   /** created successfully. */
   return 0;
@@ -515,6 +498,7 @@ int main(int argc, char **argv) {
   assert(sizeof(struct FSInfo) == 512);
 
   /** Create a 128MiB fat32 disk image. */
+  const uint32_t FAT32_SECTOR_SIZE = 512;
   int fd = open("myfat.img", O_WRONLY | O_CREAT | O_TRUNC, 0777);
   size_t volume = 128 * (1024 * 1024);
   uint8_t *buf = malloc(volume);
