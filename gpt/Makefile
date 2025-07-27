@@ -1,7 +1,9 @@
 all: a.img
 
-gpt: gpt.c
-	@echo "CC gpt.c" && gcc -O2 -g gpt.c -o gpt
+headers = $(shell ls *.h )
+
+gpt: gpt.c $(headers)
+	@echo "CC gpt.c" && gcc -static -O2 -fsanitize=undefined -g gpt.c -o gpt
 
 fat.img:
 	@dd if=/dev/zero of=fat.img bs=1M count=63

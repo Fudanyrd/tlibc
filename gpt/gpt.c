@@ -7,6 +7,8 @@
 // LBA: Logical Block Address
 //
 
+#include "endian.h"
+
 #include <assert.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -96,7 +98,7 @@ __efi_crc32(const void *buf, unsigned long len, uint32_t seed)
 }
 
 static uint32_t 
-crc32(const uint8_t *buf, unsigned long len) {
+crc32(const void *buf, unsigned long len) {
   return (__efi_crc32 (buf, len, ~0L) ^ ~0L);
 }
 
@@ -302,6 +304,14 @@ struct PartitionEntry {
   uint8_t reserved[0];
 } __attribute__((packed));
 
+static void writePartitionName(struct PartitionEntry *entry, const char *name) {
+  int idx = 0;
+  for (const char *pt = name; *pt; pt++) {
+    entry->partitionName[idx++] = *pt;
+    entry->partitionName[idx++] = (char)0;
+  }
+}
+
 // 9E8D8D40-E4D1-3547-AD9E-86523F5E2F4A
 static const struct GUID myDiskID = {
   0x9e8d8d40,
@@ -341,45 +351,59 @@ int main(int argc, char **argv) {
   struct GPTHeader *lba1 = getSector(buf, 1);
   memset(lba1, 0, BLOCK_SIZE);
   memcpy(&(lba1->signature), "EFI PART", sizeof(lba1->signature));
-  lba1->revision = 0x00010000;
-  lba1->headerSize = sizeof(struct GPTHeader);
+  /* lba1->revision = 0x00010000;
+     lba1->headerSize = sizeof(struct GPTHeader); */
+  _generic_store_le(lba1->revision, 0x00010000);
+  _generic_store_le(lba1->headerSize, sizeof(struct GPTHeader));
   /** lba1->headerCRC32 */
+  /* The following store is meant to be:
   lba1->reserved = 0;
   lba1->thisLBA = 1;
   lba1->alternateLBA = nBlock - 1;
   lba1->firstUsableLBA = 2 + nSectorForArray;
-  lba1->lastUsableLBA = nBlock - 2;
+  lba1->lastUsableLBA = nBlock - 2; */
+  _generic_store_le(lba1->reserved, 0);
+  _generic_store_le(lba1->thisLBA, 1);
+  assert(sizeof(uint64_t) == 8);
+  _generic_store_le(lba1->alternateLBA, nBlock - 1);
+  _generic_store_le(lba1->firstUsableLBA, 2 + nSectorForArray);
+  _generic_store_le(lba1->lastUsableLBA, nBlock - 2);
+
   memcpy((void *)lba1->diskID, &myDiskID, sizeof(lba1->diskID));
-  lba1->startEntryArray = 2;
+  /* lba1->startEntryArray = 2;
   lba1->numEntries = nPartition;
-  lba1->sizeEntryArray = sizeof(struct PartitionEntry);
-  assert(lba1->firstUsableLBA >= 3);
+  lba1->sizeEntryArray = sizeof(struct PartitionEntry); */
+  _generic_store_le(lba1->startEntryArray, 2);
+  _generic_store_le(lba1->numEntries, nPartition);
+  _generic_store_le(lba1->sizeEntryArray, sizeof(struct PartitionEntry));
+  assert(nSectorForArray >= 1);
   assert(*(uint64_t *)lba1->signature == 0x5452415020494645LL);
 
   // create entry array
   struct PartitionEntry *entryArray = getSector(buf, 2);
   memset(entryArray, 0, nSectorForArray * BLOCK_SIZE);
-  entryArray->startLBA = lba1->firstUsableLBA;
-  entryArray->endLBA = lba1->lastUsableLBA;
-  entryArray->attrs |= (1 << 2);
-  entryArray->attrs |= (1 << 0);
+  _generic_store_le(entryArray->startLBA, lba1->firstUsableLBA);
+  _generic_store_le(entryArray->endLBA, lba1->lastUsableLBA);
+  _generic_store_le(entryArray->attrs, (1 << 2) | (1 << 0));
   memcpy(entryArray->partId, &myDiskID, sizeof(entryArray->partId));
   memcpy(entryArray->partType, &EFI_SYSTEM_PARTITION, sizeof(struct GUID));
-  const char *name = "Y";
-  assert(strlen(name) < sizeof(entryArray->partitionName));
-  strcpy(entryArray->partitionName, name);
+  const char *name = "My Bootable Partition";
+  assert(strlen(name) < sizeof(entryArray->partitionName) / 2);
+  writePartitionName(entryArray, name);
 
   // FIXME: compute the CRC32 
-  lba1->crc32EntryArray = crc32(entryArray, lba1->sizeEntryArray * lba1->numEntries);
+  _generic_store_le(lba1->crc32EntryArray, 
+    crc32(entryArray, lba1->sizeEntryArray * lba1->numEntries));
 
   // Last LBA: backup GPT Header
   struct GPTHeader *last = getSector(buf, nBlock - 1);
   memset(last, 0, BLOCK_SIZE);
   memcpy(last, lba1, sizeof(*last));
-  last->thisLBA = nBlock - 1;
-  last->alternateLBA = 1;
-  lba1->headerCRC32 = crc32(lba1, lba1->headerSize);
-  last->headerCRC32 = crc32(last, lba1->headerSize);
+  _generic_store_le(last->thisLBA, nBlock - 1);
+  assert(sizeof(last->alternateLBA) == 8);
+  _generic_store_le(last->alternateLBA, 1);
+  _generic_store_le(lba1->headerCRC32, crc32(lba1, lba1->headerSize));
+  _generic_store_le(last->headerCRC32, crc32(last, lba1->headerSize));
 
   int srcFd = open("fat.img", O_RDONLY);
   struct stat statbuf;
