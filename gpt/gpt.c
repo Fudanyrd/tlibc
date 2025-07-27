@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -357,27 +358,40 @@ int main(int argc, char **argv) {
 
   // create entry array
   struct PartitionEntry *entryArray = getSector(buf, 2);
-  memset(entryArray, 0, lba1->sizeEntryArray);
+  memset(entryArray, 0, nSectorForArray * BLOCK_SIZE);
   entryArray->startLBA = lba1->firstUsableLBA;
   entryArray->endLBA = lba1->lastUsableLBA;
   entryArray->attrs |= (1 << 2);
   entryArray->attrs |= (1 << 0);
-  strcpy(entryArray->partitionName, "My First Bootable Sector");
   memcpy(entryArray->partId, &myDiskID, sizeof(entryArray->partId));
-  memcpy(entryArray->partType, &EFI_SYSTEM_PARTITION, sizeof(EFI_SYSTEM_PARTITION));
+  memcpy(entryArray->partType, &EFI_SYSTEM_PARTITION, sizeof(struct GUID));
+  const char *name = "Y";
+  assert(strlen(name) < sizeof(entryArray->partitionName));
+  strcpy(entryArray->partitionName, name);
 
   // FIXME: compute the CRC32 
   lba1->crc32EntryArray = crc32(entryArray, lba1->sizeEntryArray * lba1->numEntries);
 
   // Last LBA: backup GPT Header
   struct GPTHeader *last = getSector(buf, nBlock - 1);
+  memset(last, 0, BLOCK_SIZE);
   memcpy(last, lba1, sizeof(*last));
   last->thisLBA = nBlock - 1;
   last->alternateLBA = 1;
   lba1->headerCRC32 = crc32(lba1, lba1->headerSize);
   last->headerCRC32 = crc32(last, lba1->headerSize);
 
-  int fd = open("a.img", O_WRONLY);
+  int srcFd = open("fat.img", O_RDONLY);
+  struct stat statbuf;
+  fstat(srcFd, &statbuf);
+  read(srcFd, getSector(buf, lba1->firstUsableLBA), statbuf.st_size);
+  close(srcFd);
+
+  // srcFd = open("../../tlibc/boot.iso", O_RDONLY);
+  // read(srcFd, buf, 440);
+  // close(srcFd);
+
+  int fd = open("a.img", O_CREAT | O_WRONLY | O_TRUNC, 0777);
   (void)write(fd, buf, diskSize);
   close(fd);
 
