@@ -2,7 +2,12 @@
 
 #include "endian.h"
 
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 static const char *FAT_IMPL = "mkfs.fat";
 
@@ -198,7 +203,7 @@ struct BPB {
     // set to 0x55(at offset 510) 
     uint8_t signatureByte1;
 
-    // set to 0x55(at offset 510) 
+    // set to 0xaa(at offset 511) 
     uint8_t signatureByte2;
 
   } __attribute__((packed));
@@ -208,6 +213,13 @@ struct BPB {
 /**
  * In FAT32, each fat entry is 32bit. `MAX`
  * is the maximum possible cluster number.
+ * The first data cluster in the volume is cluster #2.
+ * 
+ * FAT[0] contains the BPB_Media byte value in its low 8 bits, and all 
+ * other bits are set to 1. For example, if BPB_Media is 0xF8, then it 
+ * should be 0xFFFFF8.
+ * 
+ * FAT[1] is set to the EOC Value.
  * 
  * 0x0, free
  * 
@@ -221,6 +233,29 @@ struct BPB {
  * 0xFFFFFFFF allocated and is final cluster of the file.
  */
 typedef uint32_t fat32_entry_t;
+
+/**
+ * Used in FAT[1].
+ * 
+ * If bit is 1, the volume is “clean”. The volume can be mounted for 
+ * access. If bit is 0, the volume is “dirty” indicating that a FAT file 
+ * system driver was unable to dismount the volume properly (during a 
+ * prior mount operation). The volume contents should be scanned for 
+ * any damage to file system metadata
+ */
+#define FAT32_CHUNK_SHUT_BITMASK ((uint32_t) 0x08000000)
+
+/**
+ * Used in FAT[1] of fat32.
+ * 
+ * If this bit is 1, no disk read/write errors were encountered. 
+ * If this bit is 0, the file system driver implementation encountered a 
+ * disk I/O error on the volume the last time it was mounted, which is an 
+ * indicator that some sectors may have gone bad. The volume 
+ * contents should be scanned with a disk repair utility that does 
+ * surface analysis on it looking for new bad sectors.
+ */
+#define FAT32_HDR_ERROR_BITMASK ((uint32_t) 0x04000000)
 
 /**
  * @return the number of sectors in the data region.
@@ -328,11 +363,165 @@ struct FSInfo {
 
 } __attribute__((packed));
 
+// use default sector size, 512
+#define FAT32_SECTOR_SIZE ((uint32_t) 512)
+
+struct FATConfig {
+  // number of sectors.
+  uint32_t nSector; 
+
+  uint32_t bytesPerSector;
+
+
+  // size of a cluster
+  uint32_t clusterSize; 
+
+  // if true, write random data to data region.
+  bool writeRandomData;
+
+  // if true, the media is fixed, else removable.
+  bool isFixed;
+};
+
+/**
+ * ceiling divisoin
+ */
+#define CDIV(a, b) ( ((a) + (b) - 1) / (b) )
+
+/** Creates a fat32 file system on buf. 
+ * @return 0 on success.
+ */
+int createFAT32(uint8_t *buf, const struct FATConfig *config) {
+  
+  /** Begin validating config. */
+  if (config->nSector < 16) {
+    // too small.
+    return 1;
+  } 
+
+  bool bytesIsValid = false;
+  for (int i = 512; i < 8192; i *= 2) {
+    if (config->bytesPerSector == i) {
+      bytesIsValid = true;
+      break;
+    }
+  }
+  if (!bytesIsValid) {
+    // invalid option to config->bytesPerSector.
+    // must be a power of 2 and in [512, 4096]
+    return 1;
+  }
+
+  bool clusterSizeIsValid = false;
+  for (int i = 1; i < 256; i *= 2) {
+    if (config->clusterSize == i) {
+      clusterSizeIsValid = true;
+      break;
+    }
+  }
+  if (!clusterSizeIsValid) {
+    // invalid option to config->bytesPerSector.
+    // must be a power of 2 and in [1, 128]
+    return 1;
+  }
+  /** End validating config. */
+
+  /** Begin initialize Bios parameter block */
+  struct BPB *bpb = (struct BPB *)buf;
+  const uint8_t media = config->isFixed ? 0xF8 : 0xF0;
+  const uint32_t numEntryPerSector = FAT32_SECTOR_SIZE / sizeof(fat32_entry_t);
+  const uint32_t numClusterOnDisk = (config->nSector) / (config->clusterSize);
+  const uint32_t fatSizeInSector = CDIV(numClusterOnDisk, numEntryPerSector);
+  const uint32_t numResevedSector = 8;
+  const uint32_t numFATSector = fatSizeInSector * 2 /* a backup is stored. */;
+  assert(numClusterOnDisk > 2 && "too few clusters");
+  memset(bpb, 0, sizeof(*bpb));
+  bpb->jmpBoot[0] = 0xeb;
+  bpb->jmpBoot[1] = 0x00;
+  bpb->jmpBoot[2] = 0x90;
+  memcpy(bpb->OEFName, FAT_IMPL, sizeof(bpb->OEFName));
+  _generic_store_le(bpb->bytesPerSector, config->bytesPerSector);
+  _generic_store_le(bpb->numSectorPerCluster, config->clusterSize);
+  _generic_store_le(bpb->numAllocTable, 2);
+  _generic_store_le(bpb->rootEntryCount, 0);
+  _generic_store_le(bpb->numSectors16, 0);
+  _generic_store_le(bpb->media, media);
+  _generic_store_le(bpb->sectorsPerTrack, 256);
+  _generic_store_le(bpb->numHeads, 2);
+  _generic_store_le(bpb->hiddenSec, 0);
+  _generic_store_le(bpb->numSectors32, config->nSector);
+  _generic_store_le(bpb->fatSize32, fatSizeInSector);
+  _generic_store_le(bpb->extFlags, 0);
+  _generic_store_le(bpb->revision, 0);
+  _generic_store_le(bpb->rootCluster, 2);
+  _generic_store_le(bpb->fsInfo, 1);
+  _generic_store_le(bpb->bootRecordSector, 6);
+  _generic_store_le(bpb->driverNum, 0x80);
+  memcpy(bpb->volLabel, "NO NAME         ", sizeof(bpb->volLabel));
+  memcpy(bpb->fileSysType, "FAT32   ", sizeof(bpb->fileSysType));
+  _generic_store_le(bpb->signatureByte1, 0x55);
+  _generic_store_le(bpb->signatureByte2, 0xaa);
+  // create a copy at sector 6.
+  struct BPB *bpbCopy = (struct BPB *)(buf + (FAT32_SECTOR_SIZE * 6));
+  memcpy(bpbCopy, bpb, sizeof(*bpbCopy));
+  /** End initialize Bios parameter block */
+
+  /** Initialize FSInfo block(at #1, #7). */
+  struct FSInfo *finfo = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 1));
+  _generic_store_le(finfo->leadSignature, 0x41615252);
+  _generic_store_le(finfo->structSignature, 0x61417272);
+  _generic_store_le(finfo->freeCount, 0xFFFFFFFF /* FIXME */);
+  _generic_store_le(finfo->nextFree, 0x2);
+  _generic_store_le(finfo->trailSignature, 0xAA550000);
+  struct FSInfo *finfoCopy = (struct FSInfo *)(buf + (FAT32_SECTOR_SIZE * 7));
+  memcpy(finfoCopy, finfo, sizeof(*finfo));
+  /** End Initialize FSInfo block. */
+
+  /** Initialize File allocation table. */
+  const uint32_t fat1Value = FAT32_CHUNK_SHUT_BITMASK | FAT32_HDR_ERROR_BITMASK;
+  memset(buf + (FAT32_SECTOR_SIZE * numResevedSector),
+  0, FAT32_SECTOR_SIZE * numFATSector);
+  fat32_entry_t *firstTable = buf + (FAT32_SECTOR_SIZE * numResevedSector);
+  _generic_store_le(firstTable[0], (0xFFFF00) | media);
+  _generic_store_le(firstTable[1], fat1Value);
+  fat32_entry_t *secondTable = buf + (FAT32_SECTOR_SIZE * 
+  (numResevedSector + fatSizeInSector));
+  _generic_store_le(secondTable[0], (0xFFFF00) | media);
+  _generic_store_le(secondTable[1], fat1Value);
+  /** End Initialize File allocation table. */
+
+  /** created successfully. */
+  return 0;
+}
+
+
+/** Test code */
+__attribute__((weak))
 int main(int argc, char **argv) {
   // validate fat32 structs.
   assert(sizeof(uint8_t) == 1);
   assert(sizeof(struct BPB) == 512);
   assert(sizeof(struct FSInfo) == 512);
+
+  /** Create a 128MiB fat32 disk image. */
+  int fd = open("myfat.img", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  size_t volume = 128 * (1024 * 1024);
+  uint8_t *buf = malloc(volume);
+  struct FATConfig config = {
+    volume / FAT32_SECTOR_SIZE,
+    FAT32_SECTOR_SIZE,
+    8,
+    false,
+    true
+  };
+  if (createFAT32(buf, &config)) {
+    free(buf);
+    close(fd);
+    assert(0 && "incorrect configuration");
+  }
+  write(fd, buf, volume);
+  free(buf);
+  close(fd);
 
   return 0;
 }
