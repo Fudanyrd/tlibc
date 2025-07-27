@@ -43,7 +43,7 @@ struct BPB {
   // can be any nonzero value
   uint16_t numReservedSectors;
 
-  // number of allocation tables.
+  // number of file allocation tables(FATs).
   // a value of 2 is recommended
   uint8_t numAllocTable;
 
@@ -111,7 +111,7 @@ struct BPB {
   // 0 (count is greater than or equal to 0x10000). 
   //
   //For FAT32 volumes, this field must be non-zero.
-  uint32_t numSector32;
+  uint32_t numSectors32;
 
   // held by fat32 format
   struct {
@@ -181,6 +181,11 @@ struct BPB {
     uint32_t volSerialNumber;
 
     // volume label
+    // This field matches the 11-byte 
+    // volume label recorded in the root directory
+    // 
+    // The setting for this field when there is no 
+    // volume label is the string “NO NAME ”
     uint8_t volLabel[11];
 
     // set to the string "FAT32   ",
@@ -199,6 +204,86 @@ struct BPB {
   } __attribute__((packed));
 
 } __attribute__((packed));
+
+/**
+ * In FAT32, each fat entry is 32bit. `MAX`
+ * is the maximum possible cluster number.
+ * 
+ * 0x0, free
+ * 
+ * [0x2, MAX], cluster is allocated and
+ * Value of the entry is the cluster number of 
+ * the next cluster following this 
+ * corresponding cluster.
+ * 
+ * 0xFFFFFF7 bad cluster
+ * 
+ * 0xFFFFFFFF allocated and is final cluster of the file.
+ */
+typedef uint32_t fat32_entry_t;
+
+/**
+ * @return the number of sectors in the data region.
+ */
+static uint32_t numSectorDataRegion(const struct BPB *bpb) {
+  uint32_t BPB_BytsPerSec = bpb->bytesPerSector;
+  uint32_t BPB_RootEntCnt = bpb->rootEntryCount;
+  uint32_t FATSize;
+  uint32_t totalSec;
+
+  if (bpb->fatSize16 != 0) {
+    FATSize = bpb->fatSize16;
+  } else {
+    FATSize = bpb->fatSize32;
+  }
+
+  if (bpb->numSectors16) {
+    totalSec = bpb->numSectors16;
+  } else {
+    totalSec = bpb->numSectors32;
+  }
+
+  uint32_t dataSec = totalSec - (
+  bpb->numReservedSectors /* size of reserved region */
+   + (FATSize * bpb->numAllocTable) /* size of FAT region */
+   + BPB_RootEntCnt /** is zero for fat32 */);
+  assert(dataSec < totalSec && "u32 overflow");
+
+  return dataSec;
+}
+
+/**
+ * @param n a valid cluster number
+ * @return sector number for that sector(high 32 bits) 
+ *   and the offset in the sector(lower 32bits).
+ */
+static uint64_t clusterToFATEntry(const struct BPB *bpb, uint32_t n) {
+  uint64_t ret = 0;
+  uint32_t FATSize;
+  uint32_t fatOffset;
+
+  if (bpb->fatSize16 != 0) {
+    FATSize = bpb->fatSize16;
+    fatOffset = n * 2;
+  } else {
+    FATSize = bpb->fatSize32;
+    fatOffset = n * 4;
+  }
+  assert(FATSize != 0 && "fatsize cannot be 0");
+
+  uint32_t secNum = bpb->numReservedSectors + 
+    (fatOffset / bpb->bytesPerSector);
+  uint32_t fatEntOffset = fatOffset % bpb->bytesPerSector;
+  
+  ret |= (((uint64_t) secNum) << 32);
+  ret |= ((uint64_t) fatEntOffset);
+
+  /** Takeaway here:
+   * starting from the first sector of alloc table,
+   * the entries are organized in an array format.
+   */
+  return ret;
+}
 
 
 // The FSInfo structure is only present on volumes formatted FAT32. 
