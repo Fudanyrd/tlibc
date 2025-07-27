@@ -434,7 +434,7 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   const uint32_t fatSizeInSector = CDIV(numClusterOnDisk, numEntryPerSector);
   const uint32_t numResevedSector = 8;
   const uint32_t numFATSector = fatSizeInSector * 2 /* a backup is stored. */;
-  const uint32_t numFreeFATEntry = (numFATSector * numEntryPerSector) - 2;
+  const uint32_t numFreeFATEntry = (numFATSector * numEntryPerSector) - 3;
   assert(numClusterOnDisk > 2 && "too few clusters");
   memset(bpb, 0, sizeof(*bpb));
   bpb->jmpBoot[0] = 0xeb;
@@ -488,10 +488,12 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   fat32_entry_t *firstTable = buf + (FAT32_SECTOR_SIZE * numResevedSector);
   _generic_store_le(firstTable[0], (0xFFFF00) | media);
   _generic_store_le(firstTable[1], fat1Value);
+  _generic_store_le(firstTable[2], 0xFFFFFFFF);
   fat32_entry_t *secondTable = buf + (FAT32_SECTOR_SIZE * 
   (numResevedSector + fatSizeInSector));
   _generic_store_le(secondTable[0], (0xFFFF00) | media);
   _generic_store_le(secondTable[1], fat1Value);
+  _generic_store_le(secondTable[2], 0xFFFFFFFF);
   /** End Initialize File allocation table. */
 
   /** created successfully. */
