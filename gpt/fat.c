@@ -496,6 +496,11 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   _generic_store_le(secondTable[2], 0xFFFFFFFF);
   /** End Initialize File allocation table. */
 
+  /** Initialize root directory. */
+  const uint32_t dataOffset = FAT32_SECTOR_SIZE * (
+    numResevedSector + numFATSector);
+  memset(buf + dataOffset, 0, FAT32_SECTOR_SIZE * config->clusterSize);
+
   /** created successfully. */
   return 0;
 }

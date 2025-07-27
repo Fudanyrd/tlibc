@@ -1,0 +1,5 @@
+*.txt
+parted-3.0
+*.out
+gpt
+mkfat
