@@ -2,11 +2,14 @@ all: a.img myfat.img
 
 headers = $(shell ls *.h )
 
-gpt: gpt.c $(headers) fat.c
-	@echo "CC gpt.c" && gcc -static -O2 -g fat.c gpt.c -o gpt
+%.o: %.c $(headers)
+	@echo "CC $<" && gcc -static -O2 -c -g $< -o $@
 
-mkfat: fat.c $(headers)
-	@echo "CC fat.c" && gcc -static -O2 -g fat.c -o mkfat
+gpt: gpt.o fat.o
+	@echo "CCLD gpt" && gcc -static -O2 -g fat.o gpt.o -o gpt
+
+mkfat: fat.o $(headers)
+	@echo "CCLD mkfat" && gcc -static -O2 -g fat.o -o mkfat
 
 myfat.img: mkfat
 	@./mkfat
@@ -30,4 +33,4 @@ parted: a.img
 
 .PHONY: clean 
 clean:
-	-rm -f *.img mkfat gpt
+	-rm -f *.img mkfat gpt *.o
