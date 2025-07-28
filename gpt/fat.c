@@ -471,12 +471,13 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   const uint32_t fat1Value = FAT32_CHUNK_SHUT_BITMASK | FAT32_HDR_ERROR_BITMASK;
   memset(buf + (sectorSize * numResevedSector),
   0, sectorSize * numFATSector);
-  fat32_entry_t *firstTable = buf + (sectorSize * numResevedSector);
+  fat32_entry_t *firstTable = (fat32_entry_t *)
+   (buf + (sectorSize * numResevedSector));
   _generic_store_le(firstTable[0], (0xFFFF00) | media);
   _generic_store_le(firstTable[1], fat1Value);
   _generic_store_le(firstTable[2], 0xFFFFFFFF);
-  fat32_entry_t *secondTable = buf + (sectorSize * 
-  (numResevedSector + fatSizeInSector));
+  fat32_entry_t *secondTable = (fat32_entry_t *)
+    (buf + (sectorSize * (numResevedSector + fatSizeInSector)));
   _generic_store_le(secondTable[0], (0xFFFF00) | media);
   _generic_store_le(secondTable[1], fat1Value);
   _generic_store_le(secondTable[2], 0xFFFFFFFF);
@@ -594,7 +595,13 @@ int main(int argc, char **argv) {
     close(fd);
     assert(0 && "incorrect configuration");
   }
-  write(fd, buf, volume);
+
+  /**< check return value of write */
+  if (write(fd, buf, volume) != volume) {
+    perror("write");
+    free(buf);
+    return 1;
+  };
   free(buf);
   close(fd);
 
@@ -666,11 +673,14 @@ static void *FAT32SuperGetSector(const struct FAT32Super *sb,
 static uint8_t *FAT32SuperCluster(const struct FAT32Super *sb, 
                                   uint32_t cluster);
 static void FAT32SuperFree(struct FAT32Super *sb);
+static fat32_entry_t FAT32SuperReadEntry(const struct FAT32Super *sb, uint32_t cluster);
+static void FAT32SuperWriteEntry(const struct FAT32Super *sb,
+  uint32_t cluster, fat32_entry_t value);
 
 static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
   sb->buf = buf;
 
-  struct BPB *bpb = buf;
+  struct BPB *bpb = (struct BPB *) buf;
   sb->bpb = bpb;
   sb->fsInfo = FAT32SuperGetSector(sb, 1);
 
@@ -728,6 +738,26 @@ static uint8_t *FAT32SuperCluster(const struct FAT32Super *sb,
     sb->bytesPerSector * (sb->numFAT + sb->numReserved)  /**< data region offset */
   + sb->bytesPerCluster * (cluster - 2) /**< cluster offset */
   );
+}
+
+/** Read an fat entry from first table. */
+static fat32_entry_t FAT32SuperReadEntry(const struct FAT32Super *sb, 
+  uint32_t cluster) {
+  assert(cluster < sb->maxCluster && "read out of bound");
+  fat32_entry_t ret;
+  _generic_load_le(ret, sb->tables[0][cluster]);
+  return ret;
+}
+
+/**< Writes new value to an FAT entry on all FATs. */
+static void FAT32SuperWriteEntry(const struct FAT32Super *sb,
+  uint32_t cluster, fat32_entry_t value) {
+  assert(cluster < sb->maxCluster && "write out of bound");
+  assert(cluster >= 1 && "entry 0 cannot be modified");
+
+  for (uint32_t i = 0; i < sb->numEntryTable; i++) {
+    _generic_store_le(sb->tables[i][cluster], value);
+  }
 }
 
 /**< Update backup FAT, FSInfo and BPB */

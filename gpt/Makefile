@@ -3,7 +3,7 @@ all: a.img myfat.img
 headers = $(shell ls *.h )
 
 %.o: %.c $(headers)
-	@echo "CC $<" && gcc -static -O2 -c -g $< -o $@
+	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $< -o $@
 
 gpt: gpt.o fat.o
 	@echo "CCLD gpt" && gcc -static -O2 -g fat.o gpt.o -o gpt

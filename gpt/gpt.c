@@ -423,7 +423,12 @@ int main(int argc, char **argv) {
   // close(srcFd);
 
   int fd = open("a.img", O_CREAT | O_WRONLY | O_TRUNC, 0777);
-  (void)write(fd, buf, diskSize);
+  if (write(fd, buf, diskSize) != diskSize) {
+    perror("write");
+    free(buf);
+    return 1;
+  }
+
   close(fd);
 
   free(buf);

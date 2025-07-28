@@ -24,7 +24,7 @@ static inline uint16_t __swap_16(const void *val) {
 static inline uint32_t __swap_32(const void *val) {
   uint32_t ret = 0;
   const char *src = val;
-  char *dst = &ret;
+  char *dst = (char *) &ret;
 
   dst[0] = src[3];
   dst[3] = src[0];
@@ -36,7 +36,7 @@ static inline uint32_t __swap_32(const void *val) {
 static inline uint64_t __swap_64(const void *val) {
   uint64_t ret;
   const char *src = val;
-  char *dst = &ret;
+  char *dst = (char *) &ret;
 
   for (int i = 0; i < 8; i++) {
     dst[i] = src[7 - i];
