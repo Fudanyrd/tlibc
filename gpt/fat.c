@@ -5,9 +5,12 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+int FAT32Errno = 0;
 
 static const char *FAT_IMPL = "mkfs.fat";
 
@@ -72,7 +75,7 @@ struct BPB {
   // The legal values for this field are 0xF0, 0xF8, 0xF9, 
   // 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, and 0xFF. 
   //
-  // 0xF8 is the standard value for “fixed” (non-removable) media. 
+  // 0xF8 is the standard value for "fixed" (non-removable) media. 
   // For removable media, 0xF0 is frequently used.
   uint8_t media;
 
@@ -448,7 +451,7 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   memcpy(bpb->fileSysType, "FAT32   ", sizeof(bpb->fileSysType));
   _generic_store_le(bpb->signatureByte1, 0x55);
   _generic_store_le(bpb->signatureByte2, 0xaa);
-  // create a copy at sector 6.
+  // create a copy at sector #6.
   struct BPB *bpbCopy = (struct BPB *)(buf + (sectorSize * 6));
   memcpy(bpbCopy, bpb, sizeof(*bpbCopy));
   /** End initialize Bios parameter block */
@@ -597,3 +600,151 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+uint16_t FAT32Date(uint16_t year, uint16_t month, uint16_t day) {
+  /**
+   * Bit positions 0 through 4 represent the day of the month (valid range: 1..31 inclusive) 
+   * Bit positions 5 through 8 represent the month of the year (1 = January, 12 = December, valid 
+   * range: 1..12 inclusive) 
+   * Bit positions 9 through 15 are the count of years from 1980 (valid range: 0..127 inclusive 
+   * allowing representation of years 1980 through 2107)
+   */
+
+  uint16_t ret = 0;
+
+  ret |= (day & 0x1F);
+  ret |= ((month & 0xF) << 5u);
+  ret |= ((year & 0x7F) << 9u);
+
+  return ret;
+}
+
+uint16_t FAT32Time(uint16_t hour, uint16_t minute, uint16_t second) {
+  /**
+   * Bit positions 0 through 4 contain elapsed seconds – as a count of 2-second increments (valid 
+   * range: 0..29 inclusive allowing representation of 0 through 58 seconds) 
+   *
+   * Bit positions 5 through 10 represent number of minutes (valid range: 0..59 inclusive) 
+   * Bit positions 11 through 15 represent hours (valid range: 0..23 inclusive)
+   */
+
+  uint16_t ret = 0;
+  second = second >> 1;
+
+  ret |= (second & 0x1F); /* 5 bit */
+  ret |= ((minute & 0x3F) << 5u); /* 6 bit */
+  ret |= ((hour & 0x1F) << 11u); /* 5 bit */
+
+  return ret;
+}
+
+/**< Information requried to create file or directory. */
+struct FAT32Super {
+  uint8_t *buf; /**< buffer containint disk image */
+
+  struct BPB *bpb;        /**< Sector #0 */
+  struct FSInfo *fsInfo;  /**< Sector #1 */
+
+  uint32_t bytesPerSector;  /**< size of sector */
+  uint32_t bytesPerCluster; /**< size of cluster */
+  uint32_t bytesPerFAT;     /**< size of FAT */
+
+  uint32_t numSector;   /**< Number of all sectors */
+  uint32_t numReserved; /**< number of sectors in reserved region,
+                            also FAT offset */
+  uint32_t numFAT;      /**< number of sectors in FAT region */
+  uint32_t numData;     /**< number of sectors in data region */
+  uint32_t maxCluster;  /**< maximum cluster number */
+
+  uint32_t numEntryTable;     /**< number of fat tables. */
+  fat32_entry_t **tables;     /**<  all fat tables */
+};
+
+static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf);
+static void *FAT32SuperGetSector(const struct FAT32Super *sb,
+              uint32_t sector);
+static uint8_t *FAT32SuperCluster(const struct FAT32Super *sb, 
+                                  uint32_t cluster);
+static void FAT32SuperFree(struct FAT32Super *sb);
+
+static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
+  sb->buf = buf;
+
+  struct BPB *bpb = buf;
+  sb->bpb = bpb;
+  sb->fsInfo = FAT32SuperGetSector(sb, 1);
+
+  _generic_load_le(sb->bytesPerSector, bpb->bytesPerSector);
+  uint32_t nsecPerCluster; /**< bpb->numSectorPerCluster */
+  _generic_load_le(nsecPerCluster, bpb->numSectorPerCluster);
+  sb->bytesPerCluster = nsecPerCluster * sb->bytesPerSector;
+  uint32_t fatSize; /**< bpb->fatSize32 */
+  _generic_load_le(fatSize, bpb->fatSize32);
+  sb->bytesPerFAT = fatSize * sb->bytesPerSector;
+
+  uint32_t numSector; /**< bpb->numSector32 */
+  uint32_t numReservedSectors; /**< bpb->numReservedSector */
+  uint32_t numAllocTable; /**< bpb->numAllocTable  */
+  _generic_load_le(numSector, bpb->numSectors32);
+  _generic_load_le(numReservedSectors, bpb->numReservedSectors);
+  _generic_load_le(numAllocTable, bpb->numAllocTable);
+  sb->numSector = numSector;
+  sb->numReserved = numReservedSectors;
+  sb->numFAT = fatSize * numAllocTable;
+  sb->numData = (sb->numSector - sb->numReserved - sb->numFAT);
+  sb->maxCluster = sb->numData / nsecPerCluster;
+
+  sb->numEntryTable = numAllocTable;
+  sb->tables = malloc(sizeof(fat32_entry_t *) * sb->numEntryTable);
+  sb->tables[0] = (fat32_entry_t *)(buf + sb->bytesPerSector * sb->numReserved);
+
+  for (uint32_t i = 1; i < numAllocTable; i++) {
+    sb->tables[i] = sb->tables[i - 1] + (sb->bytesPerFAT / sizeof(fat32_entry_t));
+  }
+}
+
+/**
+ * @return pointer to a sector.
+ */
+static void *FAT32SuperGetSector(const struct FAT32Super *sb,
+              uint32_t sector) {
+  
+  if (sector >= sb->numSector) {
+    return NULL;
+  }
+  return sb->buf + (sector * sb->bytesPerSector);
+}
+
+/**
+ * @return pointer to cluster `cluster`
+ */
+static uint8_t *FAT32SuperCluster(const struct FAT32Super *sb, 
+                                  uint32_t cluster) {
+  if (cluster < 2 || cluster >= sb->maxCluster) {
+    return NULL;
+  }
+
+  return sb->buf + (
+    sb->bytesPerSector * (sb->numFAT + sb->numReserved)  /**< data region offset */
+  + sb->bytesPerCluster * (cluster - 2) /**< cluster offset */
+  );
+}
+
+/**< Update backup FAT, FSInfo and BPB */
+static void FAT32SuperFree(struct FAT32Super *sb) {
+  // synchronize BPB(#0 -> #6) 
+  memcpy(FAT32SuperGetSector(sb, 6), sb->buf, sb->bytesPerSector);
+
+  // synchronize FSInfo(#1->#7)
+  memcpy(FAT32SuperGetSector(sb, 7),
+         FAT32SuperGetSector(sb, 1), sb->bytesPerSector);
+
+  // free memory buffer.
+  free(sb->tables);
+}
+
+int FAT32Mkdir(uint8_t *buf, const char *name, uint32_t flag) {
+  // not implemented
+  return 1;
+}
+

@@ -98,4 +98,16 @@ static inline void __store_le64(void *dst, uint64_t val) {
     } \
   } while(0)
 
+/**< Load little-endian `attr` into `var`. */
+#define _generic_load_le(var, attr) \
+  do {\
+    switch (sizeof(attr)) {\
+      case (1ul): { (var) = (attr); break; } \
+      case (2ul): { (var) = __load_le16(&(attr)); break; } \
+      case (4ul): { (var) = __load_le32(&(attr)); break; } \
+      case (8ul): { (var) = __load_le64(&(attr)); break; } \
+      default: { assert(0 && "incorrect use of _generic_load_le"); } \
+    } \
+  } while (0)
+
 #endif // ENDIAN_H
