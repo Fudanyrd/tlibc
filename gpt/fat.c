@@ -488,6 +488,82 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   return 0;
 }
 
+/**< Directory entry structure. */
+struct FATDirEntry {
+
+  /**
+   * 8-byte name, 3-byte suffix.
+   */
+  uint8_t name[11];
+
+  /**
+   * can be set by ATTR_READONLY, ATTR_HIDDEN, etc.
+   */
+  uint8_t attr;
+
+  /**
+   * reserved, set to 0
+   */
+  uint8_t ntres;
+
+  /**
+   * Component of the file creation time. Count of 
+   * tenths of a second. Valid range is: 
+   * 0 <= DIR_CrtTimeTenth <= 199
+   */
+  uint8_t creatTimeTenth;
+
+
+	/**
+	 * Creation time. Granularity is 2 seconds.
+	 */
+	uint16_t createTime;
+
+	/**
+	 * FIXME: Add description
+	 */
+	uint16_t createDate;
+	
+	/**
+	 * Last access date. Last access is defined as a 
+	 * read or write operation performed on the 
+	 * file/directory described by this entry
+	 */
+	uint16_t lastAccessDate;
+
+	/**
+	 * High word of first data cluster number for 
+	 * file/directory described by this entry. 
+	 * Only valid for volumes formatted FAT32. Must be 
+	 * set to 0 on volumes formatted FAT12/FAT16.
+	 */
+	uint16_t firstClusterHigh;
+
+	/**
+	 * Last modification (write) time. Value must be 
+	 * equal to createTime at file creation.
+	 */
+	uint16_t writeTime;
+	
+	/**
+	 * Last modification (write) date. Value must be
+	 * equal to DIR_CrtDate at file creation. 
+	 */
+	uint16_t writeDate;
+
+
+	/** 
+	 * Low word of first data cluster number for 
+   * file/directory described by this entry 
+	 */
+	uint16_t firstClusterLow;
+
+	/**
+	 * Size of the file in bytes.
+	 */
+	uint32_t fileSize;
+
+} __attribute__((packed));
 
 /** Test code */
 __attribute__((weak))
@@ -496,6 +572,7 @@ int main(int argc, char **argv) {
   assert(sizeof(uint8_t) == 1);
   assert(sizeof(struct BPB) == 512);
   assert(sizeof(struct FSInfo) == 512);
+	assert(sizeof(struct FATDirEntry) == 32);
 
   /** Create a 128MiB fat32 disk image. */
   const uint32_t FAT32_SECTOR_SIZE = 512;

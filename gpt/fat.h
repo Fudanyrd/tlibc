@@ -21,6 +21,12 @@ struct FATConfig {
   bool isFixed;
 };
 
+#define FAT_ATTR_READ_ONLY 0x01 
+#define FAT_ATTR_HIDDEN 0x02 
+#define FAT_ATTR_SYSTEM 0x04 
+#define FAT_ATTR_VOLUME_ID 0x08 
+#define FAT_ATTR_DIRECTORY 0x10 
+#define FAT_ATTR_ARCHIVE 0x20
 
 /** Creates a fat32 file system on buf. 
  * @return 0 on success.
