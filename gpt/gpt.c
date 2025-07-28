@@ -8,6 +8,7 @@
 //
 
 #include "endian.h"
+#include "fat.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -341,6 +342,8 @@ int main(int argc, char **argv) {
   const size_t nSectorForArray = (nEntryPerSector - 1 + nPartition) / nEntryPerSector;
   assert(nBlock > (3 + nSectorForArray)
   && "not enough sectors");
+  const size_t nSectorForFS = nBlock 
+   - 3 /** two GPT headers plus Protective MBR */ - nSectorForArray;
 
   void *buf = malloc(diskSize);
 
@@ -405,11 +408,15 @@ int main(int argc, char **argv) {
   _generic_store_le(lba1->headerCRC32, crc32(lba1, lba1->headerSize));
   _generic_store_le(last->headerCRC32, crc32(last, lba1->headerSize));
 
-  int srcFd = open("fat.img", O_RDONLY);
-  struct stat statbuf;
-  fstat(srcFd, &statbuf);
-  read(srcFd, getSector(buf, lba1->firstUsableLBA), statbuf.st_size);
-  close(srcFd);
+
+  /** Create a fat32 filesystem on the partition */
+  static struct FATConfig config;
+  config.nSector = nSectorForFS;
+  config.bytesPerSector = BLOCK_SIZE;
+  config.clusterSize = 8;
+  config.writeRandomData = false;
+  config.isFixed = true;
+  createFAT32(getSector(buf, lba1->firstUsableLBA), &config);
 
   // srcFd = open("../../tlibc/boot.iso", O_RDONLY);
   // read(srcFd, buf, 440);
