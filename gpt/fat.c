@@ -915,8 +915,14 @@ uint32_t FAT32Copyin(uint8_t *buf, int fd, const char *name,
 	_generic_store_le(entry->fileSize, fobjSize);
 	sb.nextRootEntry ++;
 
+  // update FAT Table.
+  for (uint32_t i = 1; i < allocCluster; i++) {
+    FAT32SuperWriteEntry(&sb, nextFree, 1 + nextFree);
+    nextFree++;
+  }
+  FAT32SuperWriteEntry(&sb, nextFree, 0xFFFFFFFFu);
+
 	// update fs info struct
-	nextFree += allocCluster;
 	assert(freeCount >= allocCluster);
 	freeCount -= allocCluster;
 	_generic_store_le(fiPtr->freeCount, freeCount);
