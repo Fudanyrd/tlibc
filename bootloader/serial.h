@@ -1,3 +1,8 @@
+// Credit to Yanyan Jiang
+// This file is partly derived from the Abstract Machine project 
+// from NJU.
+// Git Repo <https://github.com/NJU-ProjectN/os-workbench-2022.git>
+
 #ifndef __SERIAL_H
 #define __SERIAL_H
 
@@ -62,3 +67,4 @@ static inline void read_disk(void *buf, int sect) {
 }
 
 #endif // __SERIAL_H
+
