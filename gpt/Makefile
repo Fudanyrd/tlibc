@@ -44,3 +44,8 @@ clean:
 .PHONY: qemu 
 qemu: a.img
 	@qemu-system-x86_64 -hda a.img -nographic
+
+# display the fat filesystem.
+.PHONY: dispfat
+dispfat: myfat.img 
+	@mount myfat.img /mnt/tmp && stat /mnt/tmp/echo && umount /mnt/tmp

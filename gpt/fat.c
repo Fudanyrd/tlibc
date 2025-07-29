@@ -640,6 +640,7 @@ uint16_t FAT32Date(uint16_t year, uint16_t month, uint16_t day) {
 
   ret |= (day & 0x1F);
   ret |= ((month & 0xF) << 5u);
+  year -= 1980;
   ret |= ((year & 0x7F) << 9u);
 
   return ret;
@@ -922,6 +923,8 @@ uint32_t FAT32Copyin(uint8_t *buf, int fd, const char *name,
 	_generic_store_le(entry->createDate, date);
 	_generic_store_le(entry->lastAccessDate, date);
 	_generic_store_le(entry->firstClusterHigh, nextFree >> 16);
+  _generic_load_le(entry->writeTime, time);
+  _generic_load_le(entry->writeDate, date);
 	_generic_store_le(entry->firstClusterLow, nextFree & 0xFFFFu);
 	_generic_store_le(entry->fileSize, fobjSize);
 	sb.nextRootEntry ++;
