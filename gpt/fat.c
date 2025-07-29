@@ -607,6 +607,14 @@ int main(int argc, char **argv) {
   // is located in the image.
   printf("%u\n", sector);
 
+
+	srcFd = open("/usr/bin/wc", O_RDONLY);
+	sector = (FAT32Copyin(buf, srcFd, "wc", 
+					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM));
+	close(srcFd);
+  assert(sector != 0 && "something went wrong");
+  printf("%u\n", sector);
+
   /**< check return value of write */
   if (write(fd, buf, volume) != volume) {
     perror("write");
@@ -924,6 +932,7 @@ uint32_t FAT32Copyin(uint8_t *buf, int fd, const char *name,
     nextFree++;
   }
   FAT32SuperWriteEntry(&sb, nextFree, 0xFFFFFFFFu);
+  nextFree += 1;
 
 	// update fs info struct
 	assert(freeCount >= allocCluster);
