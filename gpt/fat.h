@@ -11,7 +11,7 @@ struct FATConfig {
   uint32_t bytesPerSector;
 
 
-  // size of a cluster
+  // size of a cluster in Sectors
   uint32_t clusterSize; 
 
   // if true, write random data to data region.
@@ -82,6 +82,18 @@ extern int createFAT32(uint8_t *buf, const struct FATConfig *config);
  * @return 0 if directory is created 
  */
 extern int FAT32Mkdir(uint8_t *buf, const char *name, uint32_t flag);
+
+/**
+ * Copy a file into the disk image, at root directory.
+ * It will gurantee that the file is allocated in a 
+ * continuous block.
+ *
+ * @param fd the file descriptor of an opened file.
+ * @param name the name of the file.
+ * @return the start sector of the file, 0 on error.
+ */
+extern uint32_t FAT32Copyin(uint8_t *buf, int fd, const char *name, 
+			        	uint32_t flag);
 
 /**< Encode a valid FAT32 Date(System endianess). */
 extern uint16_t FAT32Date(uint16_t year, uint16_t month, uint16_t day);

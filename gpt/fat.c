@@ -2,11 +2,13 @@
 
 #include "endian.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -461,7 +463,7 @@ int createFAT32(uint8_t *buf, const struct FATConfig *config) {
   _generic_store_le(finfo->leadSignature, 0x41615252);
   _generic_store_le(finfo->structSignature, 0x61417272);
   _generic_store_le(finfo->freeCount, numFreeFATEntry);
-  _generic_store_le(finfo->nextFree, 0x2);
+  _generic_store_le(finfo->nextFree, 0x3);
   _generic_store_le(finfo->trailSignature, 0xAA550000);
   struct FSInfo *finfoCopy = (struct FSInfo *)(buf + (sectorSize * 7));
   memcpy(finfoCopy, finfo, sizeof(*finfo));
@@ -515,7 +517,7 @@ struct FATDirEntry {
    * tenths of a second. Valid range is: 
    * 0 <= DIR_CrtTimeTenth <= 199
    */
-  uint8_t creatTimeTenth;
+  uint8_t createTimeTenth;
 
 
 	/**
@@ -596,6 +598,12 @@ int main(int argc, char **argv) {
     assert(0 && "incorrect configuration");
   }
 
+	int srcFd = open("/usr/bin/echo", O_RDONLY);
+	assert(FAT32Copyin(buf, srcFd, "echo", 
+					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM)
+					!= 0);
+	close(srcFd);
+
   /**< check return value of write */
   if (write(fd, buf, volume) != volume) {
     perror("write");
@@ -663,8 +671,14 @@ struct FAT32Super {
   uint32_t numData;     /**< number of sectors in data region */
   uint32_t maxCluster;  /**< maximum cluster number */
 
+	uint32_t rootCluster; /**< position of root */
+
   uint32_t numEntryTable;     /**< number of fat tables. */
   fat32_entry_t **tables;     /**<  all fat tables */
+
+	struct FATDirEntry *rootDir; /**< entries in root */
+	uint32_t nextRootEntry;      /**< next root entry to alloc */
+	uint32_t numRootEntry;       /**< number of root entries */
 };
 
 static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf);
@@ -682,7 +696,7 @@ static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
 
   struct BPB *bpb = (struct BPB *) buf;
   sb->bpb = bpb;
-  sb->fsInfo = FAT32SuperGetSector(sb, 1);
+  // sb->fsInfo cannot be initialized here.
 
   _generic_load_le(sb->bytesPerSector, bpb->bytesPerSector);
   uint32_t nsecPerCluster; /**< bpb->numSectorPerCluster */
@@ -704,6 +718,9 @@ static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
   sb->numData = (sb->numSector - sb->numReserved - sb->numFAT);
   sb->maxCluster = sb->numData / nsecPerCluster;
 
+  sb->fsInfo = FAT32SuperGetSector(sb, 1);
+	_generic_load_le(sb->rootCluster, bpb->rootCluster);
+
   sb->numEntryTable = numAllocTable;
   sb->tables = malloc(sizeof(fat32_entry_t *) * sb->numEntryTable);
   sb->tables[0] = (fat32_entry_t *)(buf + sb->bytesPerSector * sb->numReserved);
@@ -711,6 +728,27 @@ static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
   for (uint32_t i = 1; i < numAllocTable; i++) {
     sb->tables[i] = sb->tables[i - 1] + (sb->bytesPerFAT / sizeof(fat32_entry_t));
   }
+
+	uint32_t rootDirCluster = 1;
+	fat32_entry_t rootDirPtr = sb->rootCluster;
+	fat32_entry_t nextPtr;
+	_generic_load_le(nextPtr, sb->tables[0][rootDirPtr]);
+	while (nextPtr != 0xFFFFFFFFu) {
+		rootDirPtr = nextPtr;
+		_generic_load_le(nextPtr, sb->tables[0][rootDirPtr]);
+		rootDirCluster += 1;
+	}
+	sb->rootDir = (struct FATDirEntry *)FAT32SuperGetSector(sb, sb->numReserved + sb->numFAT);
+	sb->numRootEntry = rootDirCluster * sb->bytesPerCluster / sizeof(struct FATDirEntry);
+	sb->nextRootEntry = sb->numRootEntry;
+
+	for (uint32_t i = 0; i < sb->numRootEntry; i++) {
+		struct FATDirEntry *cur = &(sb->rootDir[i]);
+		if (cur->name[0] == 0) {
+			sb->nextRootEntry = i;
+			break;
+		}
+	}
 }
 
 /**
@@ -776,5 +814,121 @@ static void FAT32SuperFree(struct FAT32Super *sb) {
 int FAT32Mkdir(uint8_t *buf, const char *name, uint32_t flag) {
   // not implemented
   return 1;
+}
+
+uint32_t FAT32Copyin(uint8_t *buf, int fd, const char *name, 
+			        	uint32_t attr) {
+
+	uint32_t ret = 0;
+	
+	// infer the size of file to be put.
+	// and possibly reject huge files.
+	struct stat st;
+	if (fstat(fd, &st) != 0) {
+		// bad fd.
+		FAT32Errno = errno;
+		return 0;
+	}
+	uint32_t fobjSize = st.st_size;
+
+	// parse the super block.
+	struct FAT32Super sb;
+	FAT32SuperInit(&sb, buf);
+	const uint32_t sectorPerCluster = 
+					(sb.bytesPerCluster / sb.bytesPerSector);
+	
+	// validate the size of the file.
+	struct FSInfo *fiPtr = sb.fsInfo;
+	uint32_t nextFree, freeCount;
+	_generic_load_le(nextFree, fiPtr->nextFree);
+	_generic_load_le(freeCount, fiPtr->freeCount);
+	assert(sb.maxCluster >= nextFree && 
+									"incorrect fs");
+	const uint32_t maxFileSize = 
+					sb.bytesPerCluster * 
+					(sb.maxCluster - nextFree);
+	if (maxFileSize < fobjSize) {
+		// die.
+		FAT32Errno = EDQUOT;
+		goto err;
+	}
+
+	// use the fsInfo struct to allocate blocks.
+	const uint32_t allocCluster = CDIV(fobjSize, sb.bytesPerCluster);
+
+	// If root directory is full. do not try 
+	// to expand it, but fail now.
+	if (sb.nextRootEntry == sb.numRootEntry) {
+		FAT32Errno = EDQUOT;
+		goto err;
+	}
+
+	// find the pointer to the first cluster 
+	// allocated, and copy the data.
+	assert(nextFree > 2u);
+	ret = (nextFree - 2u) * sectorPerCluster;
+	ret += sb.numReserved + sb.numFAT;
+	uint8_t *addr = FAT32SuperGetSector(&sb, ret);
+	memset(addr, 0, allocCluster * sb.bytesPerCluster);
+	if (lseek(fd, SEEK_SET, 0) != 0) {
+		FAT32Errno = errno;
+		goto err;
+	}
+	if (read(fd, addr, fobjSize) != fobjSize) {
+		FAT32Errno = errno;
+		goto err;
+	}
+
+	// mark allocated clusters in
+	// FAT table.
+
+	// finalize this transaction
+	// by creating a directory entry.
+	// assume that the root directory
+	const uint16_t date = FAT32Date(1995, 02, 21);
+	const uint16_t time = FAT32Time(8, 30, 25);
+	struct FATDirEntry *entry = &(sb.rootDir[sb.nextRootEntry]);
+	assert(entry->name[0] == 0);
+	memset(entry, 0, sizeof(*entry));
+	//// copy the prefix of filename
+	char *pt = entry->name;
+	for (; *name && *name != '.'; name++) {
+		*pt = *name;
+		pt++;
+	}
+	//// copy suffix of filename
+	if (*name) {
+		pt = ((char *)entry->name) + 8;
+		for (; *name; name++) {
+			*pt = *name; pt++;
+		}
+	}
+	//// set other numeric attributes.
+	_generic_store_le(entry->attr, attr);
+	_generic_store_le(entry->ntres, 0);
+	_generic_store_le(entry->createTimeTenth, 42);
+	_generic_store_le(entry->createTime, time);
+	_generic_store_le(entry->createDate, date);
+	_generic_store_le(entry->lastAccessDate, date);
+	_generic_store_le(entry->firstClusterHigh, nextFree >> 16);
+	_generic_store_le(entry->firstClusterLow, nextFree & 0xFFFFu);
+	_generic_store_le(entry->fileSize, fobjSize);
+	sb.nextRootEntry ++;
+
+	// update fs info struct
+	nextFree += allocCluster;
+	assert(freeCount >= allocCluster);
+	freeCount -= allocCluster;
+	_generic_store_le(fiPtr->freeCount, freeCount);
+	_generic_store_le(fiPtr->nextFree, nextFree);
+
+	// clean, return success.
+	FAT32SuperFree(&sb);
+	return ret;
+
+err:
+	/** an error occurred */
+	FAT32SuperFree(&sb);
+	return 0;
 }
 
