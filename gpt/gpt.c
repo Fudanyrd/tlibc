@@ -422,6 +422,15 @@ int main(int argc, char **argv) {
   // read(srcFd, buf, 440);
   // close(srcFd);
 
+  // copy code in mbr.img to mbr sector
+  int srcFd = open("mbr.img", O_RDONLY);
+  if (read(srcFd, buf, 440) < 0) {
+    perror("read");
+    free(buf);
+    return 1;
+  }
+  close(srcFd);
+
   int fd = open("a.img", O_CREAT | O_WRONLY | O_TRUNC, 0777);
   if (write(fd, buf, diskSize) != diskSize) {
     perror("write");
