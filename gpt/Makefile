@@ -3,17 +3,22 @@ all: a.img myfat.img
 headers = $(shell ls *.h )
 headers := Makefile
 
+# possible options:
+### -m32: build 32bit executable.
+CFLAGS = 
+LDFLAGS = 
+
 %.o: %.c $(headers)
-	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $< -o $@
+	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $(CFLAGS) $< -o $@
 
 gpt: gpt.o fat.o
-	@echo "CCLD gpt" && gcc -static -O2 -g fat.o gpt.o -o gpt
+	@echo "CCLD gpt" && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o -o gpt
 
 mkfat: fat.o $(headers)
-	@echo "CCLD mkfat" && gcc -static -O2 -g fat.o -o mkfat
+	@echo "CCLD mkfat" && gcc -static -O2 -g $(LDFLAGS) fat.o -o mkfat
 
 myfat.img: mkfat
-	@./mkfat
+	@echo GEN myfat.img && ./mkfat
 
 mbr.img: 
 	@echo "GEN mbr.img" && make -C ../bootloader mbr.img && cp ../bootloader/mbr.img ./mbr.img
@@ -23,7 +28,7 @@ fat.img:
 	@mkfs.fat -v -F 32 -S 512 -s 8 ./fat.img
 
 a.img: gpt mbr.img
-	@./gpt 
+	@echo GEN a.img && ./gpt 
 
 
 .PHONY: cfdisk
