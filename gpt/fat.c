@@ -599,10 +599,13 @@ int main(int argc, char **argv) {
   }
 
 	int srcFd = open("/usr/bin/echo", O_RDONLY);
-	assert(FAT32Copyin(buf, srcFd, "echo", 
-					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM)
-					!= 0);
+	uint32_t sector = (FAT32Copyin(buf, srcFd, "echo", 
+					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM));
 	close(srcFd);
+  assert(sector != 0 && "something went wrong");
+  // this will print the sector where echo 
+  // is located in the image.
+  printf("%u\n", sector);
 
   /**< check return value of write */
   if (write(fd, buf, volume) != volume) {

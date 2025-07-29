@@ -1,6 +1,7 @@
 all: a.img myfat.img
 
 headers = $(shell ls *.h )
+headers := Makefile
 
 %.o: %.c $(headers)
 	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $< -o $@
@@ -34,3 +35,4 @@ parted: a.img
 .PHONY: clean 
 clean:
 	-rm -f *.img mkfat gpt *.o
+	-rm *.out
