@@ -77,6 +77,15 @@ static inline void read_disk(void *buf, int sect) {
     }; \
   } while (0)
 
+  // this ensures that size of integer are expected.
+#define __check_sizeof_int \
+  do {\
+    __static_assert(sizeof(uint8_t) == 1); \
+    __static_assert(sizeof(uint16_t) == 2); \
+    __static_assert(sizeof(uint32_t) == 4); \
+    __static_assert(sizeof(uint64_t) == 8); \
+  } while (0)
+
 #endif // __static_assert
 
 #endif // __SERIAL_H

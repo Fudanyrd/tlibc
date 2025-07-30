@@ -5,28 +5,23 @@
 #include "serial.h"
 
 void _start() {
-  // this address is reserved for boot loader(our program)
-  void *addr = 0x1000;
-  read_disk(addr, 0);
+  __check_sizeof_int;
 
-  putch('r');
-  putch('e');
-  putch('a');
-  putch('d');
-  putch('y');
+  putch('E');
+  read_disk(0x1200, 3 + 528);
+  read_disk(0x1200 + SECTSIZE, 3 + 528 + 1);
+
+  typedef void (*fn)(uint32_t);
+  fn secondary = 0x1200;
+
+  putch('S');
   putch('\n');
 
-  register uint16_t memSz asm("ax");
+  // start secondary boot loader,
+  // i.e. vmlinux(a tiny ELF loader)
+  secondary(3 + 536);
 
-  // use bios interrupt to determine
-  // size of low memory available.
-  // cite: https://kernel.org/doc/html/latest/arch/x86/boot.html
-  // 
-  // FIXME: the mov $0x0, %eax 
-  // is possibly not needed because interrupt 0x12
-  // takes no input.
-  asm volatile("mov $0x0, %%eax\n\t"
-    "int $0x12" : "=r"(memSz) :: );
-  for (;;) {}
+  asm volatile("hlt");
+  for(;;) {}
 }
 
