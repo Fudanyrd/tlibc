@@ -8,10 +8,12 @@
 
 #define SECTSIZE 512
 
+#ifndef _ELF_H
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
-typedef unsigned long uint64_t;
+typedef unsigned long long uint64_t;
+#endif // _ELF_H
 
 static inline uint8_t inb(int port) {
   uint8_t data;
@@ -65,6 +67,17 @@ static inline void read_disk(void *buf, int sect) {
     ((uint32_t *)buf)[i] = inl(0x1f0);
   }
 }
+
+#ifndef __static_assert
+#define __static_assert(cond) \
+  do {   \
+    switch (0) { \
+      case (0): break; \
+      case (cond): break; \
+    }; \
+  } while (0)
+
+#endif // __static_assert
 
 #endif // __SERIAL_H
 
