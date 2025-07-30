@@ -5,7 +5,8 @@
 #include "serial.h"
 
 void _start() {
-  void *addr = 0x7a00;
+  // this address is reserved for boot loader(our program)
+  void *addr = 0x1000;
   read_disk(addr, 0);
 
   putch('r');
