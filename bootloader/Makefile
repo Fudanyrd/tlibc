@@ -7,7 +7,7 @@ mbr: mbr.o
 	@echo LD mbr && ld -static -nostdlib -melf_i386 -o mbr mbr.o
 
 gettext: gettext.c 
-	@echo "CCLD gettext" && gcc gettext.c -O2 -g -o gettext
+	@echo "CCLD gettext" && gcc gettext.c -O2 -static -g -o gettext
 
 all: mbr.img 
 

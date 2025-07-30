@@ -15,7 +15,17 @@ void _start() {
   putch('y');
   putch('\n');
 
-  asm volatile("hlt" : : : "memory");
+  register uint16_t memSz asm("ax");
+
+  // use bios interrupt to determine
+  // size of low memory available.
+  // cite: https://kernel.org/doc/html/latest/arch/x86/boot.html
+  // 
+  // FIXME: the mov $0x0, %eax 
+  // is possibly not needed because interrupt 0x12
+  // takes no input.
+  asm volatile("mov $0x0, %%eax\n\t"
+    "int $0x12" : "=r"(memSz) :: );
   for (;;) {}
 }
 
