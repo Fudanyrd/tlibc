@@ -1,5 +1,5 @@
 SECTIONS {
-    . = 0x7C00;
+    . = 0x1200;
     .text : {
         *(.text)
     }
@@ -12,5 +12,4 @@ SECTIONS {
     .rodata : { *(.rodata) }
     .data : { *(.data) }
     .bss : { *(.bss) }
-    PROVIDE(__elf_loader = 0x1200);
 }

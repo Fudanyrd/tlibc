@@ -45,6 +45,10 @@ X             +------------------------+
 
 #define LINUX_LOAD_ADDR ((void *)0x100000)
 
+#ifndef SECTOR_DATA_START
+#define SECTOR_DATA_START ((void *)0x1000)
+#endif // SECTOR_DATA_START
+
 static inline void __k_memzero(void *addr, uint32_t size) {
   uint8_t *buf = addr;
   for (uint32_t i = 0; i < size; i++) {
@@ -60,7 +64,7 @@ static inline void __k_memzero(void *addr, uint32_t size) {
 static inline void __k_readfile(void *addr, uint32_t fstart, uint32_t foff,
         uint32_t fsize) {
   
-  unsigned char *sector_data = 0x1000;
+  unsigned char *sector_data = SECTOR_DATA_START;
   unsigned char *dst = addr;
 
   while (fsize != 0) {
@@ -96,7 +100,7 @@ void _start(uint32_t sector) {
   uint16_t phnum = ehdr->e_phnum;
   uint32_t phoff = ehdr->e_phoff;
 
-  char *sector_data = 0x1000;
+  char *sector_data = SECTOR_DATA_START;
   for (uint16_t i = 0; i < phnum; i++) {
     uint32_t off = phoff + i * sizeof(Elf64_Phdr);
     read_disk(data, sector + off / SECTSIZE);
