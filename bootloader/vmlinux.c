@@ -117,8 +117,20 @@ void __elf_main(uint32_t sector) {
     }
   }
 
+#ifdef __HALT_AFTER_LOAD
+  putch('B');
+  putch('O');
+  putch('O');
+  putch('M');
+  putch('\n');
+  // after seeing output string "BOOM"
+  // now you can goto qemu monitor and check
+  // that kernel is loaded.
+  asm volatile("hlt");
+#else
   // jump to the kernel.
   kernel_entry();
+#endif 
 
   // should not reach here.
   for (;;) { }

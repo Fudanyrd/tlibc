@@ -7,6 +7,7 @@ headers := Makefile
 ### -m32: build 32bit executable.
 CFLAGS = 
 LDFLAGS = 
+DEFS = 
 
 %.o: %.c $(headers)
 	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $(CFLAGS) $< -o $@
@@ -21,7 +22,7 @@ myfat.img: mkfat
 	@echo GEN myfat.img && ./mkfat
 
 mbr.img: 
-	@echo "GEN mbr.img" && make -C ../bootloader all && cp ../bootloader/mbr.img ./mbr.img
+	@echo "GEN mbr.img" && make -C ../bootloader all DEFS=$(DEFS) && cp ../bootloader/mbr.img ./mbr.img
 
 fat.img:
 	@dd if=/dev/zero of=fat.img bs=1M count=63
@@ -42,13 +43,14 @@ parted: a.img
 
 .PHONY: clean 
 clean:
+	-clear
 	-rm -f *.img mkfat gpt *.o
 	-rm *.out
 	-$(MAKE) -C ../bootloader clean
 
 .PHONY: qemu 
 qemu: a.img
-	@qemu-system-x86_64 -hda a.img -nographic
+	@qemu-system-x86_64 -hda a.img -nographic -no-reboot -action reboot=shutdown
 
 .PHONY: debug 
 debug: a.img 
