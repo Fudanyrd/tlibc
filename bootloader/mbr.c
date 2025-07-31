@@ -4,15 +4,19 @@
 // in the first 440 bytes of MBR sector.
 #include "serial.h"
 
+extern void __elf_loader(uint32_t);
+
+__attribute__((noreturn))
 void _start() {
   __check_sizeof_int;
 
   putch('E');
+  // the elf loader uses two sectors.
   read_disk(0x1200, 3 + 528);
   read_disk(0x1200 + SECTSIZE, 3 + 528 + 1);
 
   typedef void (*fn)(uint32_t);
-  fn secondary = 0x1200;
+  fn secondary = __elf_loader;
 
   putch('S');
   putch('\n');

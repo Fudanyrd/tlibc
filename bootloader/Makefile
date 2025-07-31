@@ -1,10 +1,10 @@
 hdrs = $(shell ls *.h ) Makefile 
 
 %.o: %.c $(hdrs)
-	@echo CC $< && gcc -Os -m16 -fpic -c -o $@ $<
+	@echo CC $< && gcc -Os -m16 -fno-builtin -c -o $@ $<
 
-mbr: mbr.o 
-	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr mbr.o
+mbr: mbr.o disk.o mbr.ld
+	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr.o disk.o
 
 gettext: gettext.c 
 	@echo "CCLD gettext" && gcc gettext.c -O2 -static -g -o gettext
