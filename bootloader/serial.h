@@ -58,7 +58,13 @@ static inline void wait_disk(void) {
   while ((inb(0x1f7) & 0xc0) != 0x40);
 }
 
-static inline void read_disk(void *buf, int sect) {
+// control linkage type of read_disk
+#ifdef __EXTERN_READ_DISK
+void read_disk(void *buf, int sect) 
+#else
+static inline void read_disk(void *buf, int sect) 
+#endif // __EXTERN_READ_DISK
+{
   wait_disk();
   outb(0x1f2, 1);
   outb(0x1f3, sect);

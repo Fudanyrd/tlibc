@@ -7,7 +7,7 @@
 // * The program is put at address 0x1200
 // * You need to install gcc-multilib to get this working.
 
-
+#define __EXTERN_READ_DISK
 #include "serial.h"
 
 #include "elf.h"
@@ -90,11 +90,11 @@ static inline void __k_readfile(void *addr, uint32_t fstart, uint32_t foff,
 typedef void (*__entry_t)(void);
 
 __attribute__((noreturn))
-void _start(uint32_t sector) {
+void __elf_main(uint32_t sector) {
   // load first sector of kernel to the address.
 
   char data[512];
-  read_disk(0x1200 + SECTSIZE, 3 + 528 + 1);
+  // read_disk(0x1200 + SECTSIZE, 3 + 528 + 1);
   read_disk(data, sector);
 
   Elf64_Ehdr *ehdr = (void *)data;

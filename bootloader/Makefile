@@ -12,12 +12,9 @@ mbr: mbr.o mbr_s.o mbr.ld
 gettext: gettext.c 
 	@echo "CCLD gettext" && gcc gettext.c -O2 -static -g -o gettext
 
-vmlinux.o: vmlinux.c $(hdrs)
-	@echo CC vmlinux.c && gcc -m32 -Os -c -fno-builtin vmlinux.c -o vmlinux.o
-
-vmlinux: vmlinux.o Makefile vmlinux.ld
+vmlinux: vmlinux.o vmlinux_s.o Makefile vmlinux.ld
 	@echo CCLD vmlinux && ld -melf_i386 -T vmlinux.ld -e 0x1200 -nostdlib \
-	vmlinux.o -o vmlinux
+	vmlinux_s.o vmlinux.o -o vmlinux
 
 mbr.img: mbr gettext
 	@echo GEN mbr.img && ./gettext mbr mbr.img
