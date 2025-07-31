@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
   // assert(code == 0x340BC6D9);
   // assert(crc32("abcdefg", 7) == 0xCED59559);
   
-  const size_t diskSize = 64 * 1024 * 1024;
+  const size_t diskSize = 128 * 1024 * 1024;
   const size_t nBlock = diskSize / BLOCK_SIZE;
   const size_t nPartition = 1;
   const size_t nEntryPerSector = BLOCK_SIZE / sizeof(struct PartitionEntry);
@@ -417,6 +417,21 @@ int main(int argc, char **argv) {
   config.writeRandomData = false;
   config.isFixed = true;
   createFAT32(getSector(buf, lba1->firstUsableLBA), &config);
+
+  
+  // Copy system files into the FAT32 partition
+  //// copy secondary bootloader(an ELF loader, but do not parse
+  //// file system)
+  void *sectorForFAT = getSector(buf, lba1->firstUsableLBA);
+  const uint16_t sysFlag = FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM;
+  int fatFd = open("../bootloader/linuz.bin", O_RDONLY);
+  printf("%d\n", lba1->firstUsableLBA);
+  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "linuz", sysFlag));
+  close(fatFd);
+  //// copy the kernel ELF
+  fatFd = open("../bootloader/kernel", O_RDONLY);
+  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "kernel", sysFlag));
+  close(fatFd);
 
   // srcFd = open("../../tlibc/boot.iso", O_RDONLY);
   // read(srcFd, buf, 440);

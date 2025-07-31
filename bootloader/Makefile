@@ -16,6 +16,9 @@ vmlinux: vmlinux.o vmlinux_s.o Makefile vmlinux.ld
 	@echo CCLD vmlinux && ld -melf_i386 -T vmlinux.ld -e 0x1200 -nostdlib \
 	vmlinux_s.o vmlinux.o -o vmlinux
 
+vmlinux.asm: vmlinux
+	@echo "OBJDUMP vmlinux.asm" && objdump -d -S vmlinux > vmlinux.asm
+
 mbr.img: mbr gettext
 	@echo GEN mbr.img && ./gettext mbr mbr.img
 
@@ -27,4 +30,4 @@ clean:
 	-clear
 	-rm gettext mbr *.img *.out *.o *.a *.bin vmlinux
 
-all: mbr.img linuz.bin
+all: mbr.img linuz.bin vmlinux.asm

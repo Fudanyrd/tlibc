@@ -21,7 +21,7 @@ myfat.img: mkfat
 	@echo GEN myfat.img && ./mkfat
 
 mbr.img: 
-	@echo "GEN mbr.img" && make -C ../bootloader mbr.img && cp ../bootloader/mbr.img ./mbr.img
+	@echo "GEN mbr.img" && make -C ../bootloader all && cp ../bootloader/mbr.img ./mbr.img
 
 fat.img:
 	@dd if=/dev/zero of=fat.img bs=1M count=63
@@ -49,6 +49,15 @@ clean:
 .PHONY: qemu 
 qemu: a.img
 	@qemu-system-x86_64 -hda a.img -nographic
+
+.PHONY: debug 
+debug: a.img 
+	@qemu-system-x86_64 -hda a.img -nographic -S -gdb tcp::1234
+
+# connect qemu-gdb
+.PHONY: gdb
+gdb: qemu.gdb
+	@gdb -x qemu.gdb
 
 # display the fat filesystem.
 .PHONY: dispfat
