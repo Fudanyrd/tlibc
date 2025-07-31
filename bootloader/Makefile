@@ -1,10 +1,13 @@
 hdrs = $(shell ls *.h ) Makefile 
 
 %.o: %.c $(hdrs)
-	@echo CC $< && gcc -Os -m16 -fno-builtin -c -o $@ $<
+	@echo CC $< && gcc -Os -m32 -fno-pic -static -nostdlib -fno-builtin -c -o $@ $<
 
-mbr: mbr.o disk.o mbr.ld
-	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr.o disk.o
+%_s.o: %.S $(hdrs)
+	@echo AS $< && gcc -m32 -static -fno-pic -c -o $@ $<
+
+mbr: mbr.o mbr_s.o mbr.ld
+	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr_s.o mbr.o
 
 gettext: gettext.c 
 	@echo "CCLD gettext" && gcc gettext.c -O2 -static -g -o gettext
@@ -12,18 +15,18 @@ gettext: gettext.c
 vmlinux.o: vmlinux.c $(hdrs)
 	@echo CC vmlinux.c && gcc -m32 -Os -c -fno-builtin vmlinux.c -o vmlinux.o
 
-vmlinux: vmlinux.o disk.o Makefile vmlinux.ld
+vmlinux: vmlinux.o Makefile vmlinux.ld
 	@echo CCLD vmlinux && ld -melf_i386 -T vmlinux.ld -e 0x1200 -nostdlib \
-	vmlinux.o disk.o -o vmlinux
+	vmlinux.o -o vmlinux
 
 mbr.img: mbr gettext
-	@./gettext mbr mbr.img
+	@echo GEN mbr.img && ./gettext mbr mbr.img
 
 linuz.bin: gettext vmlinux
-	@./gettext vmlinux ./linuz.bin
+	@echo GEN linuz.bin && ./gettext vmlinux ./linuz.bin
 
 .PHONY: clean 
 clean:
-	-rm gettext mbr *.img *.out *.o *.a *.bin
+	-rm gettext mbr *.img *.out *.o *.a *.bin vmlinux
 
 all: mbr.img linuz.bin

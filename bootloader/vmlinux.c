@@ -7,9 +7,10 @@
 // * The program is put at address 0x1200
 // * You need to install gcc-multilib to get this working.
 
-#include <elf.h>
 
 #include "serial.h"
+
+#include "elf.h"
 
 /** Memory layout
               ~                        ~
@@ -93,6 +94,7 @@ void _start(uint32_t sector) {
   // load first sector of kernel to the address.
 
   char data[512];
+  read_disk(0x1200 + SECTSIZE, 3 + 528 + 1);
   read_disk(data, sector);
 
   Elf64_Ehdr *ehdr = (void *)data;

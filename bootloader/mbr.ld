@@ -2,6 +2,7 @@ SECTIONS {
     . = 0x7C00;
     .text : {
         *(.text)
+        *(.text.__x86.get_pc_thunk.bx)
     }
     .eh_frame : {
         *(.eh_frame)
