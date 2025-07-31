@@ -1,10 +1,10 @@
 hdrs = $(shell ls *.h ) Makefile 
 
 %.o: %.c $(hdrs)
-	@echo CC $< && gcc -Os -m32 -fno-pic -static -nostdlib -fno-builtin -c -o $@ $<
+	@echo CC $< && gcc -Os -m32 -fno-pic -static -nostdlib -g -fno-builtin -c -o $@ $<
 
 %_s.o: %.S $(hdrs)
-	@echo AS $< && gcc -m32 -static -fno-pic -c -o $@ $<
+	@echo AS $< && gcc -m32 -static -fno-pic -c -g -o $@ $<
 
 mbr: mbr.o mbr_s.o mbr.ld
 	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr_s.o mbr.o
@@ -24,6 +24,7 @@ linuz.bin: gettext vmlinux
 
 .PHONY: clean 
 clean:
+	-clear
 	-rm gettext mbr *.img *.out *.o *.a *.bin vmlinux
 
 all: mbr.img linuz.bin
