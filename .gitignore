@@ -6,6 +6,9 @@
 *.img
 *.tar
 *.gz
+*.bin
+Image*
+*.sha256sum
 
 # temporay file
 tmp
