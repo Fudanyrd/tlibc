@@ -12,8 +12,8 @@ DEFS =
 %.o: %.c $(headers)
 	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $(CFLAGS) $< -o $@
 
-gpt: gpt.o fat.o
-	@echo "CCLD gpt" && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o -o gpt
+gpt: gpt.o fat.o mkgpt.o
+	@echo "CCLD gpt" && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o mkgpt.o -o gpt
 
 mkfat: fat.o $(headers)
 	@echo "CCLD mkfat" && gcc -static -O2 -g $(LDFLAGS) fat.o -o mkfat

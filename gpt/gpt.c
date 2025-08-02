@@ -9,6 +9,7 @@
 
 #include "endian.h"
 #include "fat.h"
+#include "gpt.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -137,7 +138,7 @@ struct PartitionRecord {
   uint32_t sizeInLBA;
 } __attribute__((packed));
 
-#define BLOCK_SIZE 512
+#define BLOCK_SIZE GPT_SECTOR_SIZE
 #define GPT_SIGNATURE ((uint16_t)0xAA55)
 
 //
@@ -246,20 +247,6 @@ struct GPTHeader {
   // uint8_t reservedArr[0];
 } __attribute__((packed));
 
-//
-// GUID specification
-// @see https://uefi.org/specs/UEFI/2.10/Apx_A_GUID_and_Time_Formats.html?highlight=guid#guid-and-time-formats
-//
-struct GUID {
-
-  uint32_t timeLow;
-  uint16_t timeMid;
-  uint16_t timeHigh;
-  uint8_t clockSeqHigh;
-  uint8_t clockSeqLow;
-  uint8_t node[6];
-} __attribute__((packed));
-
 // C12A7328-F81F-11D2-BA4B-00A0C93EC93B
 static const struct GUID EFI_SYSTEM_PARTITION = {
   0xc12a7328,
@@ -322,6 +309,9 @@ static const struct GUID myDiskID = {
   {0x86, 0x52, 0x3f, 0x5e, 0x2f, 0x4a}
 };
 
+// If 0 will disable the vscode's syntax highlight.
+// make things easier.
+#ifdef __IMPOSSIBLE_STRING
 int main(int argc, char **argv) {
   assert(sizeof(struct GUID) == 16);
   assert(sizeof(struct PartitionRecord) == 16);
@@ -457,4 +447,104 @@ int main(int argc, char **argv) {
 
   free(buf);
   return 0;
+}
+#endif // 0
+
+size_t GPTGenerate(const struct GPTConfig *config) {
+  assert(sizeof(uint64_t) == 8);
+  assert(sizeof(struct GUID) == 16);
+  assert(sizeof(struct PartitionRecord) == 16);
+  assert(sizeof(struct MBR) == 512);
+  assert(BLOCK_SIZE >= 512);
+  assert(sizeof(struct GPTHeader) == 92);
+  assert(sizeof(struct GPTHeader) <= BLOCK_SIZE);
+  assert(sizeof(struct PartitionEntry) == 128);
+  assert(BLOCK_SIZE % sizeof(struct PartitionEntry) == 0);
+
+  uint8_t *buf = config->buf;
+  const size_t nBlock = config->volume;
+  size_t nPartition = config->numPart;
+  const size_t nEntryPerSector = BLOCK_SIZE / sizeof(struct PartitionEntry);
+  const size_t nSectorForArray = (nEntryPerSector - 1 + nPartition) / nEntryPerSector;
+  const size_t nSectorsForFS = nBlock 
+    - 4 /** GPT headers, MBR, 1 reserved sector */ - nSectorForArray;
+  const size_t reservedLBA = nBlock - 2;
+  const size_t lastLBA = nBlock - 1;
+
+  if (nBlock < 4 + nSectorForArray || nSectorForArray == 0) {
+    // too small, or no partition!
+    return 0;
+  }
+
+  // LBA 0 (i.e., the first logical block) contains a protective MBR
+  createProtectGPT((struct MBR *)buf, BLOCK_SIZE, nBlock);
+
+  // try to allocate blocks for each partition.
+  size_t ret = 0;
+  size_t start = 2 /** MBR + one header */ + nSectorForArray;
+  size_t remains = nSectorsForFS;
+  for (; ret < config->numPart; ret++) {
+    struct PartitionConfig *cp = & config->partitions[ret];
+    if (remains < cp->volume) {
+      // cannot allocate for this partition. stop.
+      break;
+    } else {
+      remains -= cp->volume;
+      cp->startLBA = start;
+      start += cp->volume;
+    }
+  }
+  //// now ret holds number of partitions.
+  nPartition = ret; 
+
+  // write entry array.
+  uint32_t entryArrayCRC; 
+  do {
+    struct PartitionEntry *entryArrayBase = getSector(buf, 2);
+    struct PartitionEntry *entryArray = entryArrayBase;
+    struct PartitionConfig *cp = config->partitions;
+    for (size_t i = 0; i < nPartition; i++) {
+      memset(entryArray, 0, nSectorForArray * BLOCK_SIZE);
+      _generic_store_le(entryArray->startLBA, cp->startLBA);
+      _generic_store_le(entryArray->endLBA, cp->startLBA + cp->volume - 1);
+      _generic_store_le(entryArray->attrs, (1 << 2) | (1 << 0));
+      memcpy(entryArray->partId, &(cp->partId), sizeof(entryArray->partId));
+      memcpy(entryArray->partType, &(cp->partType), sizeof(struct GUID));
+      const char *name = cp->name;
+      writePartitionName(entryArray, name);
+      //// advance
+      entryArray++;
+      cp++;
+    } 
+    entryArrayCRC = crc32(entryArrayBase, sizeof(*entryArrayBase) * nPartition);
+  } while (0);
+
+  // primary and backup GPT header.
+  struct GPTHeader *lba1 = getSector(buf, 1);
+  struct GPTHeader *last = getSector(buf, nBlock - 1);
+  memset(lba1, 0, sizeof(*lba1));
+  memset(last, 0, sizeof(*last));
+  //// primary gpt header
+  memcpy(&(lba1->signature), "EFI PART", sizeof(lba1->signature));
+  _generic_store_le(lba1->revision, 0x00010000);
+  _generic_store_le(lba1->headerSize, sizeof(struct GPTHeader));
+  _generic_store_le(lba1->reserved, 0);
+  _generic_store_le(lba1->thisLBA, 1);
+  _generic_store_le(lba1->alternateLBA, nBlock - 1);
+  _generic_store_le(lba1->firstUsableLBA, start);
+  _generic_store_le(lba1->lastUsableLBA, nBlock - 2);
+  memcpy(lba1->diskID, &(config->diskId), sizeof(lba1->diskID));
+  _generic_store_le(lba1->startEntryArray, 2);
+  _generic_store_le(lba1->numEntries, nPartition);
+  _generic_store_le(lba1->sizeEntryArray, sizeof(struct PartitionEntry));
+  _generic_store_le(lba1->crc32EntryArray, entryArrayCRC);
+  //// backup gpt header
+  memcpy(last, lba1, sizeof(*last));
+  _generic_store_le(last->thisLBA, nBlock - 1);
+  _generic_store_le(last->alternateLBA, 1);
+  //// at this time, compute CRC32 for headers.
+  _generic_store_le(lba1->headerCRC32, crc32(lba1, lba1->headerSize));
+  _generic_store_le(last->headerCRC32, crc32(last, lba1->headerSize));
+
+  return ret;
 }
