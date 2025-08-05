@@ -2,3 +2,5 @@ gettext
 mbr
 vmlinux
 kernel
+getpayload
+*.html
