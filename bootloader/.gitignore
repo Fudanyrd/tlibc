@@ -1,6 +1,7 @@
 gettext 
 mbr
 vmlinux
+bzimage
 kernel
 getpayload
 *.html

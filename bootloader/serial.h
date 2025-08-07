@@ -19,7 +19,13 @@ typedef int int32_t;
 typedef long long int64_t;
 #endif // _ELF_H
 
-/**< Figure 3-8, load segment descriptor with `lgdt` */
+/**<  Volume 3, Figure 3-8, load segment descriptor with `lgdt` 
+ * 
+ * `Base Address`: Defines the location of byte 0 of the segment 
+ * within the 4-GByte linear address space. The  processor puts 
+ * together the three base address fields to form a single 32-bit 
+ * value. Segment base addresses should be aligned to 16-byte boundaries. 
+ */
 struct SegmentDescriptor {
   /**< segment limit [15:0] */
   uint32_t seg_limit_low : 16;
@@ -40,7 +46,9 @@ struct SegmentDescriptor {
   uint32_t seg_limit_high : 4;
   /**< available for use of system software */
   uint32_t AVL : 1;
-  /**< 64-bit code segment */
+  /**< 64-bit code segment
+     If L = 1 and D = 0, run in 64-bit mode.
+     If D = 1, set operand size as 32-bit. */
   uint32_t L : 1;
   /**< Default operation size, 0: 16 bit, 1: 32bit */
   uint32_t DB : 1;
@@ -49,6 +57,35 @@ struct SegmentDescriptor {
   uint32_t G : 1;
   /**< base address [31:24] */
   uint32_t base_high : 8;
+} __attribute__((packed));
+
+/**< Layout of a segment selector(cs, ds, ss, etc.)
+ * To load a value into cs, you should do: mov $(val << 3), %cs */
+struct SegmentSelector {
+  /**< request privilege level */
+  uint16_t RPL : 2;
+  /**< Table indicator, 0: global, 1: local */
+  uint16_t TI : 1;
+  /**< bits [3:15] */
+  uint16_t Index : 13;
+} __attribute__((packed));
+
+/**< Layout of 32-bit Descriptor Table.
+   See `lgdt` instruction in volume 2A. */
+struct DescriptorTable32 {
+  /**< (.word) size of table in bytes */
+  uint16_t limit;
+  /**< (.long) start address of the table. */
+  uint32_t ptr;
+} __attribute__((packed));
+
+/**< Layout of 64-bit Descriptor Table.
+   See `lgdt` instruction in volume 2A. */
+struct DescriptorTable64 {
+  /**< (.word) size of table in bytes */
+  uint16_t limit;
+  /**< (.quad) start address of the table. */
+  uint64_t ptr;
 } __attribute__((packed));
 
 static inline uint8_t inb(int port) {
@@ -131,6 +168,9 @@ static inline void read_disk(void *buf, int sect)
     __static_assert(sizeof(int32_t) == 4); \
     __static_assert(sizeof(int64_t) == 8); \
     __static_assert(sizeof(struct SegmentDescriptor) == 8); \
+    __static_assert(sizeof(struct SegmentSelector) == 2); \
+    __static_assert(sizeof(struct DescriptorTable32) == 6); \
+    __static_assert(sizeof(struct DescriptorTable64) == 10); \
   } while (0)
 
 #endif // __static_assert
