@@ -19,6 +19,38 @@ typedef int int32_t;
 typedef long long int64_t;
 #endif // _ELF_H
 
+/**< Figure 3-8, load segment descriptor with `lgdt` */
+struct SegmentDescriptor {
+  /**< segment limit [15:0] */
+  uint32_t seg_limit_low : 16;
+  /**< base address [15:0] */
+  uint32_t base_low : 16;
+
+  /**< base [23:16] */
+  uint32_t base_mid : 8;
+  /**< segment type */
+  uint32_t type : 4;
+  /**< Descriptor type(0-system, 1-code or data). */
+  uint32_t S : 1;
+  /**< descriptor previledge level */
+  uint32_t DPL : 2;
+  /**< presence */
+  uint32_t P : 1;
+  /**< segment limit [19:16] */
+  uint32_t seg_limit_high : 4;
+  /**< available for use of system software */
+  uint32_t AVL : 1;
+  /**< 64-bit code segment */
+  uint32_t L : 1;
+  /**< Default operation size, 0: 16 bit, 1: 32bit */
+  uint32_t DB : 1;
+  /**< granularity, when flag is set, the segment 
+    limit is interpreted in 4-KByte units */
+  uint32_t G : 1;
+  /**< base address [31:24] */
+  uint32_t base_high : 8;
+} __attribute__((packed));
+
 static inline uint8_t inb(int port) {
   uint8_t data;
   asm volatile ("inb %1, %0" : "=a"(data) : "d"((uint16_t)port));
@@ -98,6 +130,7 @@ static inline void read_disk(void *buf, int sect)
     __static_assert(sizeof(int16_t) == 2); \
     __static_assert(sizeof(int32_t) == 4); \
     __static_assert(sizeof(int64_t) == 8); \
+    __static_assert(sizeof(struct SegmentDescriptor) == 8); \
   } while (0)
 
 #endif // __static_assert

@@ -6,6 +6,10 @@
 // * Address [0x1000, 0x1200] is reserved for sector data.
 // * The program is put at address 0x1200
 // * You need to install gcc-multilib to get this working.
+//
+// NOTE:
+// This loads the ELF format kernel, not bzImage.
+
 
 #define __EXTERN_READ_DISK
 #include "serial.h"
