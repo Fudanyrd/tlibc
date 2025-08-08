@@ -7,7 +7,7 @@
 #include "serial.h"
 
 __attribute__((section(".text")))
-static const char *LINUX_CMD_LINE = "init=/init trace_clock=local console=ttyS0 earlyprintk";
+static const char *LINUX_CMD_LINE = "init=/init trace_clock=local console=ttyS0 earlyprintk root=/dev/sda1 rw";
 
 // jump to the setup code.
 extern void jump_to_setup(void *base_ptr, void *heap_end);
