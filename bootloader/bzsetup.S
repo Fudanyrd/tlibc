@@ -31,15 +31,15 @@ jump_to_setup:
     lgdt .table
     ljmp $GDT_ENTRY(1), $next
 
-.code32
+.code16
 next:
     // load segment registers with the same proper selector
-    movw $GDT_ENTRY(2), %ax
+    mov $GDT_ENTRY(2), %eax
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
-    movw %ax, %fs
+    movw %ax, %ss
 
     // clear PE bit
     mov %cr0, %eax
@@ -48,7 +48,7 @@ next:
 
     // jump to setup code,
     // it is put at the start of heap(linear addr 0xa000).
-    ljmp $0x220, $0xa000
+    ljmp $0x220, $(0xa000-0x2200)
 
 .code32
 halt:
@@ -74,7 +74,7 @@ halt:
     .word 0x0000 // base_low
     .byte 0x00 // base_mid
     .byte 0x9a // P, DPL, S, Type
-    .byte 0x40 // G, D/B, L, AVL, seg_limit_high
+    .byte 0x00 // G, D/B, L, AVL, seg_limit_high
     .byte 0x00 // base_high
     // data segment descriptor
     // suitable for real-address mode
@@ -82,7 +82,7 @@ halt:
     .word 0x0000 // base_low
     .byte 0x00 // base_mid
     .byte 0x92 // P, DPL, S, Type
-    .byte 0x40 // G, D/B, L, AVL, seg_limit_high
+    .byte 0x00 // G, D/B, L, AVL, seg_limit_high
     .byte 0x00 // base_high
 .end_descriptors:
 
