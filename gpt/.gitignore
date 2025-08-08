@@ -6,4 +6,5 @@ mkfat
 *.deb
 fat.pdf
 e2fsprogs-1.46.0
+init
 
