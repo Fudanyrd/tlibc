@@ -37,6 +37,8 @@ int main(int argc, char **argv) {
   const size_t volume = disk_size / GPT_SECTOR_SIZE;
   const char *perror_message;
 
+  printf("#ifndef __CONFIG_H\n#define __CONFIG_H\n\n");
+
   // allocate resources.
   int fd = open("a.img", O_CREAT | O_TRUNC | O_RDWR, 0777);
   if (fd < 0) {
@@ -79,7 +81,7 @@ int main(int argc, char **argv) {
 
   // write the start sector of each partition
   for (size_t i = 0; i < config.numPart; i++) {
-    printf("%ld\n", config.partitions[i].startLBA);
+    printf("#define PARTITION_%ld_START %ld\n", i, config.partitions[i].startLBA);
   }
 
   /** Create a fat32 filesystem on the partition */
@@ -97,18 +99,18 @@ int main(int argc, char **argv) {
   //// file system)
   const uint16_t sysFlag = FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM;
   int fatFd = open("../bootloader/linuz.bin", O_RDONLY);
-  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "linuz", sysFlag));
+  printf("#define BOOTLOADER_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "linuz", sysFlag));
   close(fatFd);
   //// copy the kernel ELF
   fatFd = open("../bootloader/kernel", O_RDONLY);
-  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "kernel", sysFlag));
+  printf("#define KERNEL_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "kernel", sysFlag));
   close(fatFd);
   /// copy busybox, a versatile utility
   fatFd = open("/usr/bin/busybox", O_RDONLY);
-  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "busybox", FAT_ATTR_READ_ONLY));
+  printf("#define BUSYBOX_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "busybox", FAT_ATTR_READ_ONLY));
   close(fatFd);
   fatFd = open("init", O_RDONLY);
-  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "init", FAT_ATTR_READ_ONLY));
+  printf("#define INIT_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "init", FAT_ATTR_READ_ONLY));
   close(fatFd);
   //// copy mbr boot sector
   fatFd = open("mbr.img", O_RDONLY);
@@ -120,6 +122,8 @@ int main(int argc, char **argv) {
     perror_message = "write";
     goto fail;
   }
+  printf("\n#define BOOT_PARTITION_START PARTITION_0_START\n");
+  printf("\n#endif // __CONFIG_H\n");
 
   close(fd);
   munmap(buf, disk_size);

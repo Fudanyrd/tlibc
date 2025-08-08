@@ -5,6 +5,8 @@
 .code32
 _start:
     // load the rest of the loader(total 2 sectors)
+    // 532 is the second sector containing this bootloader.
+    // FIXME: it is hard-coded.
     push $532
     push $0x1400
     call read_disk

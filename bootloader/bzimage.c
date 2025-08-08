@@ -36,7 +36,7 @@ static const char *message = "DIE!";
 void __elf_main() {
   // read the boot sector and real-mode code.
   
-  uint32_t sector = 539 /** FIXME: hard-coded start sector. */;
+  uint32_t sector = 539 /** FIXME: hard-coded start sector of bzImage. */;
   void *load_start = 0x2000;
   read_disk(load_start, sector);
   read_disk(load_start + LINUX_SECTOR_SIZE, sector + 1);
