@@ -35,8 +35,8 @@ mbr.img: mbr gettext
 bzimage.img: bzimage gettext
 	@echo GEN bzimage.img && ./gettext bzimage bzimage.img
 
-linuz.bin: gettext vmlinux
-	@echo GEN linuz.bin && ./gettext vmlinux ./linuz.bin
+linuz.bin: bzimage.img
+	@echo LINK linuz.bin && link bzimage.img linuz.bin
 
 .PHONY: clean 
 clean:
