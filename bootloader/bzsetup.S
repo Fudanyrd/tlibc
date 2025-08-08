@@ -46,8 +46,9 @@ next:
     and $~(1 << 0), %eax
     mov %eax, %cr0
 
-    // jump to setup code: jmp.far $(base_ptr + 0x200)
-    ljmp $0x220, $0x12000
+    // jump to setup code,
+    // it is put at the start of heap(linear addr 0xa000).
+    ljmp $0x220, $0xa000
 
 .code32
 halt:
