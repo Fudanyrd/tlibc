@@ -7,6 +7,9 @@ DEFS =
 %_s.o: %.S $(hdrs)
 	@echo AS $< && gcc -m32 -static -fno-pic -c -g $(DEFS) -o $@ $<
 
+_%: %_s.o
+	@echo CCLD $< && ld $< -melf_i386 -Ttext 0x1000 -o $@ -g
+
 mbr: mbr.o mbr_s.o mbr.ld
 	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr_s.o mbr.o
 
