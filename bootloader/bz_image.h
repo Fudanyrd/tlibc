@@ -12,6 +12,8 @@ extern "C" {
 // the sector size regardless of hardware.
 #define LINUX_SECTOR_SIZE (512u)
 
+#define LOADED_HIGH (1u << 0)
+
 /**
  * This is used to define a more extensible 
  * boot parameters passing mechanism.

@@ -10,28 +10,32 @@
 #define GDT_ENTRY(n)  \
 	((n) << 3)
 
+// extern void jump_to_setup(void *base_ptr, void *heap_end);
 .globl jump_to_setup
 .globl halt
 
 .code32
 jump_to_setup:
+    pop %eax       // return address
     pop %edi       // base_ptr
-    pop %esp       // heap_end
+    pop %edx       // heap_end
+    mov %edx, %esp // use heap_end as the stack pointer
+    push %eax
     
     // enter with interrupts disabled
     cli
 
     mov %edi, %esi
     lea .descriptors, %edi
-    add $8, %edi // skip the null descriptor
+    add $16, %edi // skip the null descriptor
     call desc_set_base
-    add $8, %edi // skip the code segment descriptor
+    sub $8, %edi // skip the code segment descriptor
     add $0x200, %esi
     call desc_set_base
     lgdt .table
 
     // set ss, ds, es, fs, gs
-    mov $GDT_ENTRY(2), %si
+    movw $GDT_ENTRY(2), %si
     movw %si, %ss
     movw %si, %ds
     movw %si, %es

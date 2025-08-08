@@ -6,6 +6,9 @@
 #include "bz_image.h"
 #include "serial.h"
 
+__attribute__((section(".text")))
+static const char *LINUX_CMD_LINE = "init=/init trace_clock=local";
+
 // jump to the setup code.
 extern void jump_to_setup(void *base_ptr, void *heap_end);
 
@@ -41,16 +44,37 @@ void __elf_main() {
   }
 
   // read the protected-mode kernel.
-  /** FIXME: the size of bzImage(in bytes) is hard-coded */
-  const uint32_t img_size = 18019328;
+  const uint32_t img_size = (setup_sects * LINUX_SECTOR_SIZE) + (khdr->syssize * 16);
+  const uint16_t protocol = khdr->version;
+  if (!(khdr->loadflags & LOADED_HIGH) || protocol < 0x0202) {
+    // not supported.
+    die();
+  }
   load_addr = 0x100000;
   for (uint32_t i = setup_sects; i < (img_size / LINUX_SECTOR_SIZE); i++) {
     read_disk(load_addr, sector + i);
     load_addr += LINUX_SECTOR_SIZE;
   }
 
+  khdr->type_of_loader = 0xFF; // set the type of loader to 0xFF.
+  uint32_t heap_end;
+  heap_end = 0x10000;
+  khdr->heap_end_ptr = heap_end - 0x200;
+  khdr->loadflags |= 0x80; // set the heap flag.
+
+  do {
+    char *cmd_line = (const char *)(load_start + heap_end);
+    for (const char *pt = LINUX_CMD_LINE; *pt; pt++) {
+      *cmd_line++ = *pt;
+    }
+    *cmd_line = '\0'; // null-terminate the command line.
+    khdr->cmd_line_ptr = (uint32_t)(load_start + heap_end);
+  } while (0);
+
+#ifndef __HALT_AFTER_LOAD
   // jump to real mode code to start the kernel.
-  jump_to_setup(load_start, 0x9000);
+  jump_to_setup(load_start, heap_end);
+#endif // __HALT_AFTER_LOAD
 
   // should not reach here because kernel should be running.
   die();
