@@ -17,6 +17,21 @@ extern void halt() __attribute__((noreturn));
 
 static void die() __attribute__((noreturn));
 
+__attribute__((section(".text.str")))
+static const uint8_t code16[] = {
+  0x8c, 0xc8, // mov ax, cs
+  0x83, 0xe8, 0x20, // sub ax, 0x20
+  0x8e, 0xd0, // mov ss, ax
+  0x8e, 0xd8, // mov ds, ax
+  0x8e, 0xc0, // mov es, ax
+  0x8e, 0xe0, // mov fs, ax
+  0x8e, 0xe8, // mov gs, ax
+  0xff, 0x26, 0x00, 0x00, // jmp cs:0x0
+};
+
+__attribute__((section(".text.code")))
+static const char *message = "DIE!";
+
 void __elf_main() {
   // read the boot sector and real-mode code.
   
@@ -71,6 +86,12 @@ void __elf_main() {
     khdr->cmd_line_ptr = (uint32_t)(load_start + heap_end);
   } while (0);
 
+  /** Put the 16-bit code at the start of the heap. */
+  uint8_t *code16_start = (uint8_t *)load_start + 0x8000;
+  for (uint8_t i = 0; i < sizeof(code16); i++) {
+    code16_start[i] = code16[i];
+  }
+
 #ifndef __HALT_AFTER_LOAD
   // jump to real mode code to start the kernel.
   jump_to_setup(load_start, heap_end);
@@ -79,9 +100,6 @@ void __elf_main() {
   // should not reach here because kernel should be running.
   die();
 }
-
-__attribute__((section(".text")))
-static const char *message = "DIE!";
 
 static void die() {
   for (const char *pt = message; *pt; pt++) {

@@ -2,6 +2,7 @@ SECTIONS {
     . = 0x1200;
     .text : {
         *(.text)
+        *(.text.*)
     }
     .eh_frame : {
         *(.eh_frame)
