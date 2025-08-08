@@ -103,6 +103,13 @@ int main(int argc, char **argv) {
   fatFd = open("../bootloader/kernel", O_RDONLY);
   printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "kernel", sysFlag));
   close(fatFd);
+  /// copy busybox, a versatile utility
+  fatFd = open("/usr/bin/busybox", O_RDONLY);
+  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "busybox", FAT_ATTR_READ_ONLY));
+  close(fatFd);
+  fatFd = open("init", O_RDONLY);
+  printf("%d\n", FAT32Copyin(sectorForFAT, fatFd, "init", FAT_ATTR_READ_ONLY));
+  close(fatFd);
   //// copy mbr boot sector
   fatFd = open("mbr.img", O_RDONLY);
   read(fatFd, buf, 440);

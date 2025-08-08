@@ -17,6 +17,12 @@ QEMU_FLAGS += -m 2G -smp 4 -gdb tcp::1234
 gpt: gpt.o fat.o mkgpt.o
 	@echo "CCLD gpt" && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o mkgpt.o -o gpt
 
+init.o: init.c $(headers)
+	@echo "CC init.o" && gcc -m64 -ffreestanding -nostdlib -static -O2 -c $(CFLAGS) $< -o $@
+
+init: init.o 
+	@echo "CCLD init" && ld -static -nostdlib $(LDFLAGS) init.o -o init && strip init
+
 mkfat: fat.o $(headers)
 	@echo "CCLD mkfat" && gcc -static -O2 -g $(LDFLAGS) fat.o -o mkfat
 
@@ -30,7 +36,7 @@ fat.img:
 	@dd if=/dev/zero of=fat.img bs=1M count=63
 	@mkfs.fat -v -F 32 -S 512 -s 8 ./fat.img
 
-a.img: gpt mbr.img
+a.img: gpt mbr.img init
 	@echo GEN a.img && ./gpt 
 
 
