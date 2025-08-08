@@ -8,6 +8,8 @@ headers := Makefile
 CFLAGS = 
 LDFLAGS = 
 DEFS = 
+QEMU_FLAGS = -nographic -no-reboot -action reboot=shutdown
+QEMU_FLAGS += -m 2G -smp 4 -gdb tcp::1234
 
 %.o: %.c $(headers)
 	@echo "CC $<" && gcc -Wno-overflow -static -O2 -c -g $(CFLAGS) $< -o $@
@@ -50,7 +52,7 @@ clean:
 
 .PHONY: qemu 
 qemu: a.img
-	@qemu-system-x86_64 -hda a.img -nographic -no-reboot -action reboot=shutdown
+	@qemu-system-x86_64 -hda a.img $(QEMU_FLAGS)
 
 .PHONY: debug 
 debug: a.img 

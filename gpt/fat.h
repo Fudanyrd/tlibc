@@ -86,7 +86,8 @@ extern int FAT32Mkdir(uint8_t *buf, const char *name, uint32_t flag);
 /**
  * Copy a file into the disk image, at root directory.
  * It will gurantee that the file is allocated in a 
- * continuous block.
+ * continuous block. One side effect of this is that
+ * the offset of `fd` will be changed to the end of the file.
  *
  * @param fd the file descriptor of an opened file.
  * @param name the name of the file.
