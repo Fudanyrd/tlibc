@@ -22,28 +22,32 @@ jump_to_setup:
     mov %edx, %esp // use heap_end as the stack pointer
     push %eax
     
+    // (Vol.3, 11.9.2) Switching Back to Real-Address Mode
     // enter with interrupts disabled
     cli
 
-    mov %edi, %esi
-    lea .descriptors, %edi
-    add $16, %edi // skip the null descriptor
-    call desc_set_base
-    sub $8, %edi // skip the code segment descriptor
-    add $0x200, %esi
-    call desc_set_base
+    // Transfer program control to a readable segment that has a limit of 64 KBytes
+    //// use far jump to switch to the code segment
     lgdt .table
+    ljmp $GDT_ENTRY(1), $next
 
-    // set ss, ds, es, fs, gs
-    movw $GDT_ENTRY(2), %si
-    movw %si, %ss
-    movw %si, %ds
-    movw %si, %es
-    movw %si, %fs
-    movw %si, %gs
+.code32
+next:
+    // load segment registers with the same proper selector
+    movw $GDT_ENTRY(2), %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+    movw %ax, %fs
+
+    // clear PE bit
+    mov %cr0, %eax
+    and $~(1 << 0), %eax
+    mov %eax, %cr0
 
     // jump to setup code: jmp.far $(base_ptr + 0x200)
-    ljmp $GDT_ENTRY(1), $0x0
+    ljmp $0x220, $0x12000
 
 .code32
 halt:
@@ -52,42 +56,32 @@ halt:
 .L0:
     jmp .L0
 
-// void desc_set_base(struct SegmentDescriptor *desc, uint32_t base) {
-//     desc->base_low = base & 0xFFFF;
-//     desc->base_mid = (base >> 16) & 0xFF;
-//     desc->base_high = (base >> 24) & 0xFF;
-// }
-desc_set_base:
-    mov %esi, %eax
-    and $0xFFFF, %eax
-    movw %ax, 4(%edi) // base_low
-    mov %esi, %eax
-    shr $16, %eax
-    and $0xFF, %eax
-    movb %al, 6(%edi) // base_mid
-    mov %esi, %eax
-    shr $24, %eax
-    movb %al, 7(%edi) // base_high
-    ret
-
 .align 16
 .descriptors:
     // null descriptor
     .long 0x0
     .long 0x0 
     // code segment descriptor
+    // suitable for real-address mode
+    // - Limit = 64 KBytes (0FFFFH)
+    // - Byte granular (G = 0)
+    // - Expand up (E = 0)
+    // - Writable (W = 1)
+    // - Present (P = 1)
+    // - Base = any value (0x0)
     .word 0xffff // seg_limit_low
     .word 0x0000 // base_low
     .byte 0x00 // base_mid
-    .byte 0x90 // P, DPL, S, Type
-    .byte 0xCF // G, D/B, L, AVL, seg_limit_high
+    .byte 0x9a // P, DPL, S, Type
+    .byte 0x40 // G, D/B, L, AVL, seg_limit_high
     .byte 0x00 // base_high
     // data segment descriptor
+    // suitable for real-address mode
     .word 0xffff // seg_limit_low
     .word 0x0000 // base_low
     .byte 0x00 // base_mid
     .byte 0x92 // P, DPL, S, Type
-    .byte 0xCF // G, D/B, L, AVL, seg_limit_high
+    .byte 0x40 // G, D/B, L, AVL, seg_limit_high
     .byte 0x00 // base_high
 .end_descriptors:
 
