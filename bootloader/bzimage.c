@@ -1,4 +1,38 @@
 // A simple bzImage loader(used with bzimage.S).
+// currently supports boot protocol version >= 2.02
+
+
+// clang-format off
+/** Memory layout
+              ~                        ~
+              |  Protected-mode kernel |
+100000        +------------------------+
+              |  I/O memory hole       |
+0A0000        +------------------------+
+              |  Reserved for BIOS     |      Leave as much as possible unused
+              ~                        ~
+              |  Command line          |      (Can also be below the X+10000 mark)
+X+10000       +------------------------+
+              |  Stack/heap            |      For use by the kernel real-mode code.
+X+08000       +------------------------+
+              |  Kernel setup          |      The kernel real-mode code.
+              |  Kernel boot sector    |      The kernel legacy boot sector.
+X             +------------------------+
+              |  Boot loader           |      <- Boot sector entry point 0000:7C00
+001000        +------------------------+
+              |  Reserved for MBR/BIOS |
+000800        +------------------------+
+              |  Typically used by MBR |
+000600        +------------------------+
+              |  BIOS use only         |
+000000        +------------------------+
+
+... where X = 0x2000. Therfore, cs = 0x220, 
+  ds = es = fs = gs = ss = 0x200 before jumping to the setup code.
+
+  This kernel loader is put at address 0x1200.
+ */
+// clang-format on
 
 // do not inline read_disk.
 #define __EXTERN_READ_DISK
