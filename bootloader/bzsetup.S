@@ -1,4 +1,10 @@
 // a routine for jumping to setup code.
+// The setup code runs on real-address mode, whereas 
+// the program is in protected-mode at entry to jump_to_setup.
+// Therefore, it should switch to real-address mode,
+// and jump to a routine(bzimage.c, code16) that properly 
+// handles data segment registers 
+//
 // jump_to_setup(void *base_ptr, void *heap_end)
 // see also: https://kernel.org/doc/html/latest/arch/x86/boot.html#running-the-kernel
 
@@ -46,8 +52,8 @@ next:
     and $~(1 << 0), %eax
     mov %eax, %cr0
 
-    // jump to setup code,
-    // it is put at the start of heap(linear addr 0xa000).
+    // jump bzimage.c:code16
+    //// it is put at the start of heap(linear addr 0xa000).
     ljmp $0x220, $(0xa000-0x2200)
 
 .code32
