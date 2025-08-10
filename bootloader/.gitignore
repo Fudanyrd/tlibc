@@ -5,3 +5,4 @@ bzimage
 kernel
 getpayload
 *.html
+biosmbr

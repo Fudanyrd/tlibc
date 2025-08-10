@@ -13,6 +13,9 @@ _%: %_s.o
 mbr: mbr.o mbr_s.o mbr.ld
 	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o mbr -T mbr.ld mbr_s.o mbr.o
 
+biosmbr: biosmbr_s.o mbr.ld
+	@echo LD mbr && ld -static -nostdlib -e 0x7c00 -melf_i386 -o biosmbr -T mbr.ld biosmbr_s.o
+
 bzimage: bzimage.o bzimage_s.o bzimage.ld bzsetup_s.o
 	@echo LD bzimage && ld -melf_i386 -T bzimage.ld -e _start -o bzimage bzimage_s.o bzimage.o bzsetup_s.o
 
@@ -31,6 +34,9 @@ vmlinux.asm: vmlinux
 
 mbr.img: mbr gettext
 	@echo GEN mbr.img && ./gettext mbr mbr.img
+
+biosmbr.img: biosmbr gettext
+	@echo GEN biosmbr.img && ./gettext biosmbr biosmbr.img
 
 bzimage.img: bzimage gettext
 	@echo GEN bzimage.img && ./gettext bzimage bzimage.img
