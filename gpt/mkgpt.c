@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   int fatFd = open("../bootloader/linuz.bin", O_RDONLY);
   printf("#define BOOTLOADER_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "linuz", sysFlag));
   close(fatFd);
-  //// copy the kernel ELF
+  //// copy the kernel bzImage
   fatFd = open("../bootloader/kernel", O_RDONLY);
   printf("#define KERNEL_OFFSET %d\n", FAT32Copyin(sectorForFAT, fatFd, "kernel", sysFlag));
   close(fatFd);

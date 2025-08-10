@@ -17,11 +17,17 @@ QEMU_FLAGS += -m 2G -smp 4 -gdb tcp::1234
 gpt: gpt.o fat.o mkgpt.o
 	@echo "CCLD gpt" && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o mkgpt.o -o gpt
 
+installer: gpt.o installer.o fat.o
+	@echo CCLD installer && gcc -static -O2 -g $(LDFLAGS) fat.o gpt.o installer.o -o installer
+
 init.o: init.c $(headers)
 	@echo "CC init.o" && gcc -m64 -ffreestanding -nostdlib -static -O2 -c $(CFLAGS) $< -o $@
 
 init: init.o 
 	@echo "CCLD init" && ld -static -nostdlib $(LDFLAGS) init.o -o init && strip init
+
+init.elf: init
+	@echo COPY init.elf && link init init.elf
 
 mkfat: fat.o $(headers)
 	@echo "CCLD mkfat" && gcc -static -O2 -g $(LDFLAGS) fat.o -o mkfat
