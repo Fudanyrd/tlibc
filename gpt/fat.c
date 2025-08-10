@@ -571,62 +571,6 @@ struct FATDirEntry {
 
 } __attribute__((packed));
 
-/** Test code */
-__attribute__((weak))
-int main(int argc, char **argv) {
-  // validate fat32 structs.
-  assert(sizeof(uint8_t) == 1);
-  assert(sizeof(struct BPB) == 512);
-  assert(sizeof(struct FSInfo) == 512);
-	assert(sizeof(struct FATDirEntry) == 32);
-
-  /** Create a 128MiB fat32 disk image. */
-  const uint32_t FAT32_SECTOR_SIZE = 512;
-  int fd = open("myfat.img", O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  size_t volume = 128 * (1024 * 1024);
-  uint8_t *buf = malloc(volume);
-  struct FATConfig config = {
-    volume / FAT32_SECTOR_SIZE,
-    FAT32_SECTOR_SIZE,
-    8,
-    false,
-    true
-  };
-  if (createFAT32(buf, &config)) {
-    free(buf);
-    close(fd);
-    assert(0 && "incorrect configuration");
-  }
-
-	int srcFd = open("/usr/bin/echo", O_RDONLY);
-	uint32_t sector = (FAT32Copyin(buf, srcFd, "echo", 
-					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM));
-	close(srcFd);
-  assert(sector != 0 && "something went wrong");
-  // this will print the sector where echo 
-  // is located in the image.
-  printf("%u\n", sector);
-
-
-	srcFd = open("/usr/bin/wc", O_RDONLY);
-	sector = (FAT32Copyin(buf, srcFd, "wc", 
-					FAT_ATTR_READ_ONLY | FAT_ATTR_SYSTEM));
-	close(srcFd);
-  assert(sector != 0 && "something went wrong");
-  printf("%u\n", sector);
-
-  /**< check return value of write */
-  if (write(fd, buf, volume) != volume) {
-    perror("write");
-    free(buf);
-    return 1;
-  };
-  free(buf);
-  close(fd);
-
-  return 0;
-}
-
 uint16_t FAT32Date(uint16_t year, uint16_t month, uint16_t day) {
   /**
    * Bit positions 0 through 4 represent the day of the month (valid range: 1..31 inclusive) 
@@ -686,7 +630,7 @@ struct FAT32Super {
 	uint32_t rootCluster; /**< position of root */
 
   uint32_t numEntryTable;     /**< number of fat tables. */
-  fat32_entry_t **tables;     /**<  all fat tables */
+  fat32_entry_t *tables[4];     /**<  all fat tables(at most 4) */
 
 	struct FATDirEntry *rootDir; /**< entries in root */
 	uint32_t nextRootEntry;      /**< next root entry to alloc */
@@ -734,7 +678,7 @@ static void FAT32SuperInit(struct FAT32Super *sb, uint8_t *buf) {
 	_generic_load_le(sb->rootCluster, bpb->rootCluster);
 
   sb->numEntryTable = numAllocTable;
-  sb->tables = malloc(sizeof(fat32_entry_t *) * sb->numEntryTable);
+  memset(sb->tables, 0, sizeof(sb->tables));
   sb->tables[0] = (fat32_entry_t *)(buf + sb->bytesPerSector * sb->numReserved);
 
   for (uint32_t i = 1; i < numAllocTable; i++) {
@@ -818,9 +762,6 @@ static void FAT32SuperFree(struct FAT32Super *sb) {
   // synchronize FSInfo(#1->#7)
   memcpy(FAT32SuperGetSector(sb, 7),
          FAT32SuperGetSector(sb, 1), sb->bytesPerSector);
-
-  // free memory buffer.
-  free(sb->tables);
 }
 
 int FAT32Mkdir(uint8_t *buf, const char *name, uint32_t flag) {

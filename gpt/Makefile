@@ -36,7 +36,10 @@ myfat.img: mkfat
 	@echo GEN myfat.img && ./mkfat
 
 mbr.img: 
-	@echo "GEN mbr.img" && make -C ../bootloader all DEFS=$(DEFS) && cp ../bootloader/mbr.img ./mbr.img
+	@echo "GEN mbr.img" && make -C ../bootloader all DEFS=$(DEFS) && link ../bootloader/mbr.img ./mbr.img
+
+biosmbr.img:
+	@echo "GEN biosmbr.img" && make -C ../bootloader biosmbr.img DEFS=$(DEFS) && link ../bootloader/biosmbr.img ./biosmbr.img
 
 fat.img:
 	@dd if=/dev/zero of=fat.img bs=1M count=63
