@@ -1,6 +1,6 @@
 /* routine for reading bios disk. */
 
-/* int bios_read_disk(uint32_t sector); */
+/* int bios_read_disk(uint32_t sector, void *addr); */
 .globl bios_read_disk
 
 #define GDT_ENTRY(n)  \
@@ -16,14 +16,21 @@ bios_read_disk:
     /* eax := sector */
     movl 4(%esp), %eax 
     push %ebx
+    /* ebx := addr */
+    movl 12(%esp), %ebx
     push %ecx
     push %edx
     push %esi
     push %edi
     push %ebp
-    movl $ksector, %ebx
     /* ksector := sector */
-    movl %eax, (%ebx) 
+    movl $ksector, %ecx
+    movl %eax, (%ecx) 
+    shr $4, %ebx
+    /* buffer segment := ebx := addr */
+    movl $disk_address_packet, %ecx
+    addl $6, %ecx
+    movw %bx, (%ecx)
 
     /*
      * step 1: jump to 16-bit.
@@ -87,8 +94,6 @@ do_read_disk:
     movl %ebx, 8(%si)
     movl ksector_high, %ebx
     movl %ebx, 12(%si)
-    /* the segment of buffer address */
-    movw $0x100, 6(%si)
     /* bios intr function */
     movb $0x42, %ah
     /* 

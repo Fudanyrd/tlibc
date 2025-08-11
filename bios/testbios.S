@@ -3,6 +3,7 @@
 
 .code32
 _start:
+    pushl $0x1400
     pushl $539
     call bios_read_disk
     hlt
