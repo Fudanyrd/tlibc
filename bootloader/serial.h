@@ -127,6 +127,10 @@ static inline void wait_disk(void) {
   while ((inb(0x1f7) & 0xc0) != 0x40);
 }
 
+#ifdef __BIOS__
+extern void bios_read_disk(uint32_t sect, uint32_t buf);
+#endif
+
 // control linkage type of read_disk
 #ifdef __EXTERN_READ_DISK
 void read_disk(void *buf, int sect) 
@@ -134,6 +138,8 @@ void read_disk(void *buf, int sect)
 static inline void read_disk(void *buf, int sect) 
 #endif // __EXTERN_READ_DISK
 {
+
+#ifndef __BIOS__
   wait_disk();
   outb(0x1f2, 1);
   outb(0x1f3, sect);
@@ -145,6 +151,18 @@ static inline void read_disk(void *buf, int sect)
   for (int i = 0; i < SECTSIZE / 4; i ++) {
     ((uint32_t *)buf)[i] = inl(0x1f0);
   }
+#else
+  // use bios interface
+  uint32_t addr = buf;
+  addr = addr >= (1 * 1024 * 1024) ? 0x1000 : addr;
+  bios_read_disk(sect, addr);
+  if (addr != ((uint32_t) buf)) {
+    // copy memory.
+    for (int i = 0; i < SECTSIZE / 4; i++) {
+      ((uint32_t *) buf)[i] = ((uint32_t *) addr)[i];
+    }
+  }
+#endif // __BIOS__
 }
 
 #ifndef __static_assert
