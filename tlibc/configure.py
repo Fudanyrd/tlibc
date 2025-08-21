@@ -6,6 +6,7 @@ import os
 CC = "gcc"
 CFLAGS = " -ffreestanding -static -MD "
 LD = "ld"
+LDFLAGS = "-nostdlib"
 
 # program prefix
 PREFIX = "_"
@@ -23,6 +24,7 @@ def main() -> int:
         fobj.write(f"CC = {CC}\n")
         fobj.write(f"CFLAGS = {CFLAGS}\n")
         fobj.write(f"LD = {LD}\n")
+        fobj.write(f"LDFLAGS = {LDFLAGS}\n")
 
     with open('Makefile', 'w') as fobj:
         fobj.write("# auto generated, do not modify.\ninclude Makefile.config\n\n")

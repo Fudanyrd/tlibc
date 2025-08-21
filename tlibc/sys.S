@@ -65,7 +65,14 @@ _start:
     // argv -> rsi
     movq %rsp, %rsi
 	add $0x8, %rsi
+    // envp -> rdx
+    movq %rdi, %rax
+    addq $2, %rax
+    shlq $3, %rax
+    movq %rsp, %rdx
+    addq %rax, %rdx
     // jump to main
+    xor %rax, %rax
     call main
     // call exit(return_code_of_main)
     movq %rax, %rdi
